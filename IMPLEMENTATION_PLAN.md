@@ -77,7 +77,7 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ### Phase 1: Tracer API (local, testable)
 
-**Progress (2025-06-01, Phase 1 complete):** Tasks **1–11** complete. **37 tests** pass. **Checkpoint A** complete. Architecture slices 1–4 applied. **Task 20** app CI workflow added (`.github/workflows/ci.yml`).
+**Progress (2025-06-01, Phase 1 complete):** Tasks **1–11** complete. **37 tests** pass. **Checkpoint A** complete (human review passed). Architecture slices 1–4 applied. **Task 20** app CI workflow added (`.github/workflows/ci.yml`).
 
 ---
 
@@ -322,7 +322,7 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 - [x] `cd app && uv run ruff check . && uv run ruff format --check .`
 - [x] `cd app && uv run mypy .`
 - [x] `curl` `/weather`, `/health/live`, `/health/ready`, `/docs` locally with `WEATHER_PROVIDER=mock`
-- [ ] **Human review optional** before Phase 2
+- [x] **Human review** before Phase 2 *(smoke, CONTEXT contract, CI green — passed)*
 
 ---
 
