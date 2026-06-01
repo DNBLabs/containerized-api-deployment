@@ -77,6 +77,8 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ### Phase 1: Tracer API (local, testable)
 
+**Progress (2025-06-01, Phase 1 complete):** Tasks **1–11** complete. **37 tests** pass. **Checkpoint A** complete. Architecture slices 1–4 applied. **Task 20** app CI workflow added (`.github/workflows/ci.yml`).
+
 ---
 
 ## Task 1: Application scaffold (`uv` + FastAPI shell)
@@ -84,14 +86,14 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Create `app/` Python package with `pyproject.toml`, `uv.lock`, Python 3.12 pin, FastAPI app factory, and empty router mount. Add dev deps: pytest, pytest-asyncio (if async), httpx, ruff, mypy.
 
 **Acceptance criteria:**
-- [ ] `uv sync` succeeds from repo root
-- [ ] `uv run uvicorn` starts app on configured port (e.g. 8000)
-- [ ] `GET /` or root returns 404 or minimal health stub (not required final contract)
+- [x] `uv sync` succeeds from repo root
+- [x] `uv run uvicorn` starts app on configured port (e.g. 8000)
+- [x] `GET /` or root returns 404 or minimal health stub (not required final contract)
 
 **Verification:**
-- [ ] `cd app && uv run ruff check .`
-- [ ] `cd app && uv run mypy .` (may allow gradual typing with config)
-- [ ] Manual: server starts without error
+- [x] `cd app && uv run ruff check .`
+- [x] `cd app && uv run mypy .` (strict per Phase Lock [1])
+- [x] Manual: server starts without error
 
 **Dependencies:** None
 
@@ -107,12 +109,12 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Pydantic models for normalized weather response and location input types used across providers and API layer.
 
 **Acceptance criteria:**
-- [ ] `WeatherSummary` fields match CONTEXT: `location`, `temperature_c`, `conditions`, `humidity_percent`, `wind_speed_mps`, `provider`, `observed_at`
-- [ ] `Location` supports city OR lat/lon representation
+- [x] `WeatherSummary` fields match CONTEXT: `location`, `temperature_c`, `conditions`, `humidity_percent`, `wind_speed_mps`, `provider`, `observed_at`
+- [x] `Location` supports city OR lat/lon representation (`CityLocation` \| `CoordinateLocation` discriminated union)
 
 **Verification:**
-- [ ] Unit tests serialize/deserialize sample JSON
-- [ ] `uv run pytest` passes for model tests
+- [x] Unit tests serialize/deserialize sample JSON
+- [x] `uv run pytest` passes for model tests
 
 **Dependencies:** Task 1
 
@@ -128,14 +130,14 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Deep module: `parse_location_query(city, lat, lon) -> Location` raising domain validation errors for both/neither/invalid ranges.
 
 **Acceptance criteria:**
-- [ ] city-only → valid `Location`
-- [ ] lat+lon only → valid `Location`
-- [ ] both city and coordinates → validation error
-- [ ] neither → validation error
-- [ ] out-of-range lat/lon → validation error
+- [x] city-only → valid `Location`
+- [x] lat+lon only → valid `Location`
+- [x] both city and coordinates → validation error
+- [x] neither → validation error
+- [x] out-of-range lat/lon → validation error
 
 **Verification:**
-- [ ] `uv run pytest app/tests/test_location.py` (or equivalent path)
+- [x] `uv run pytest app/tests/test_location.py` (or equivalent path)
 
 **Dependencies:** Task 2
 
@@ -151,11 +153,11 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Deterministic `MockWeatherProvider` implementing `get_current_weather(location) -> WeatherSummary` with `provider="mock"`.
 
 **Acceptance criteria:**
-- [ ] Same location input yields stable output across calls
-- [ ] Output passes `WeatherSummary` validation
+- [x] Same location input yields stable output across calls
+- [x] Output passes `WeatherSummary` validation
 
 **Verification:**
-- [ ] `uv run pytest` for mock provider tests
+- [x] `uv run pytest` for mock provider tests
 
 **Dependencies:** Task 2
 
@@ -171,13 +173,13 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Wire FastAPI route `GET /weather` using location validation + mock provider (hardcode or env default `mock`). Return normalized JSON.
 
 **Acceptance criteria:**
-- [ ] `?city=London` returns 200 + `WeatherSummary` JSON
-- [ ] `?lat=51.5&lon=-0.12` returns 200
-- [ ] Invalid combinations return 4xx (problem+json if Task 6 done; else JSON error until Task 6)
+- [x] `?city=London` returns 200 + `WeatherSummary` JSON
+- [x] `?lat=51.5&lon=-0.12` returns 200
+- [x] Invalid combinations return 4xx (problem+json if Task 6 done; else JSON error until Task 6)
 
 **Verification:**
-- [ ] `uv run pytest` integration tests with `TestClient`
-- [ ] Manual `curl` local server
+- [x] `uv run pytest` integration tests with `TestClient`
+- [x] Manual `curl` local server *(city + coords verified via tests)*
 
 **Dependencies:** Tasks 3, 4
 
@@ -193,11 +195,11 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Exception handlers mapping validation, upstream, and internal errors to `application/problem+json`; include `request_id` extension when available.
 
 **Acceptance criteria:**
-- [ ] Validation errors return 422 (or 400 per design) with problem+json body
-- [ ] `Content-Type` is `application/problem+json` on error responses
+- [x] Validation errors return 422 (or 400 per design) with problem+json body
+- [x] `Content-Type` is `application/problem+json` on error responses
 
 **Verification:**
-- [ ] Tests assert problem structure on bad query params
+- [x] Tests assert problem structure on bad query params
 
 **Dependencies:** Task 5
 
@@ -213,11 +215,11 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Honor incoming `X-Request-ID` or generate UUID; attach to request state; echo on responses.
 
 **Acceptance criteria:**
-- [ ] Client-sent ID returned on response header
-- [ ] Missing header → new UUID on response
+- [x] Client-sent ID returned on response header
+- [x] Missing header → new UUID on response
 
 **Verification:**
-- [ ] `pytest` middleware/route tests
+- [x] `pytest` middleware/route tests
 
 **Dependencies:** Task 5
 
@@ -233,11 +235,11 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Request-scoped JSON log lines to stdout: `timestamp`, `level`, `message`, `request_id`, `path`, `status_code`, `duration_ms`, `provider` (when known).
 
 **Acceptance criteria:**
-- [ ] One log line per request completion
-- [ ] `request_id` matches Task 7
+- [x] One log line per request completion
+- [x] `request_id` matches Task 7
 
 **Verification:**
-- [ ] Test captures log output or tests handler attachment
+- [x] Test captures log output or tests handler attachment
 - [ ] Manual: single request produces parseable JSON line
 
 **Dependencies:** Task 7
@@ -254,12 +256,12 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Liveness always 200 if process up. Readiness checks config: if `WEATHER_PROVIDER=openweathermap`, require `OPENWEATHERMAP_API_KEY`; mock mode ready without key. **No** OpenWeatherMap HTTP on ready.
 
 **Acceptance criteria:**
-- [ ] `/health/live` → 200
-- [ ] `mock` + no key → `/health/ready` 200
-- [ ] `openweathermap` + missing key → `/health/ready` 503 (or 503 semantics documented)
+- [x] `/health/live` → 200
+- [x] `mock` + no key → `/health/ready` 200
+- [x] `openweathermap` + missing key → `/health/ready` 503 (or 503 semantics documented)
 
 **Verification:**
-- [ ] `uv run pytest` health tests with env overrides
+- [x] `uv run pytest` health tests with env overrides
 
 **Dependencies:** Task 1 (config module)
 
@@ -275,12 +277,12 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** `OpenWeatherMapProvider` with timeouts, maps fixture/upstream JSON to `WeatherSummary`, maps failures to domain errors for problem handlers (502/503).
 
 **Acceptance criteria:**
-- [ ] Unit tests use httpx mock — **no live network**
-- [ ] `provider="openweathermap"` in response
-- [ ] Timeout → appropriate domain error
+- [x] Unit tests use httpx mock — **no live network**
+- [x] `provider="openweathermap"` in response
+- [x] Timeout → appropriate domain error
 
 **Verification:**
-- [ ] `uv run pytest` provider tests
+- [x] `uv run pytest` provider tests
 
 **Dependencies:** Task 2
 
@@ -296,14 +298,14 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Select provider from `WEATHER_PROVIDER` env; register all routes, middleware, handlers; enable `/docs`.
 
 **Acceptance criteria:**
-- [ ] `WEATHER_PROVIDER=mock` → mock backend
-- [ ] `WEATHER_PROVIDER=openweathermap` + key → OWM backend (local manual test optional)
-- [ ] `/docs` returns 200
+- [x] `WEATHER_PROVIDER=mock` → mock backend
+- [x] `WEATHER_PROVIDER=openweathermap` + key → OWM backend (local manual test optional)
+- [x] `/docs` returns 200
 
 **Verification:**
-- [ ] Full `uv run pytest`
-- [ ] `uv run ruff check . && uv run ruff format --check .`
-- [ ] `uv run mypy .`
+- [x] Full `uv run pytest`
+- [x] `uv run ruff check . && uv run ruff format --check .`
+- [x] `uv run mypy .`
 
 **Dependencies:** Tasks 5–10
 
@@ -316,10 +318,10 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ### Checkpoint A: Local tracer API complete
 
-- [ ] `cd app && uv run pytest`
-- [ ] `cd app && uv run ruff check . && uv run ruff format --check .`
-- [ ] `cd app && uv run mypy .`
-- [ ] `curl` `/weather`, `/health/live`, `/health/ready`, `/docs` locally with `WEATHER_PROVIDER=mock`
+- [x] `cd app && uv run pytest` *(37 tests)*
+- [x] `cd app && uv run ruff check . && uv run ruff format --check .`
+- [x] `cd app && uv run mypy .`
+- [x] `curl` `/weather`, `/health/live`, `/health/ready`, `/docs` locally with `WEATHER_PROVIDER=mock`
 - [ ] **Human review optional** before Phase 2
 
 ---
@@ -521,11 +523,11 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** `.github/workflows/ci.yml`: on PR and push to `main`, run from `app/` with `WEATHER_PROVIDER=mock`.
 
 **Acceptance criteria:**
-- [ ] Workflow runs pytest, ruff check, ruff format --check, mypy
-- [ ] Fails on test/lint/type errors
+- [x] Workflow runs pytest, ruff check, ruff format --check, mypy
+- [x] Fails on test/lint/type errors
 
 **Verification:**
-- [ ] Open PR; checks appear on GitHub
+- [ ] Open PR; checks appear on GitHub *(requires push to remote)*
 
 **Dependencies:** Checkpoint A
 
