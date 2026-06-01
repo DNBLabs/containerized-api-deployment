@@ -10,7 +10,10 @@ from weather_api.errors import register_exception_handlers
 from weather_api.main import create_app
 from weather_api.middleware.rate_limit import RateLimitMiddleware, create_rate_limit_store
 from weather_api.middleware.request_id import RequestIdMiddleware
-from weather_api.middleware.security_headers import SecurityHeadersMiddleware
+from weather_api.middleware.security_headers import (
+    SecurityHeadersMiddleware,
+    resolve_content_security_policy,
+)
 
 
 def test_security_headers_are_present_on_responses() -> None:
@@ -22,7 +25,23 @@ def test_security_headers_are_present_on_responses() -> None:
     assert response.status_code == 200
     assert response.headers["X-Content-Type-Options"] == "nosniff"
     assert response.headers["X-Frame-Options"] == "DENY"
-    assert "Content-Security-Policy" in response.headers
+    assert response.headers["Content-Security-Policy"] == resolve_content_security_policy(
+        "/health/live",
+    )
+
+
+def test_docs_responses_use_relaxed_content_security_policy() -> None:
+    """Swagger UI can load CDN assets while API routes keep strict CSP."""
+    client = TestClient(create_app())
+
+    docs_response = client.get("/docs")
+    weather_response = client.get("/weather?city=London")
+
+    assert docs_response.status_code == 200
+    assert "cdn.jsdelivr.net" in docs_response.headers["Content-Security-Policy"]
+    assert weather_response.headers["Content-Security-Policy"] == (
+        "default-src 'none'; frame-ancestors 'none'"
+    )
 
 
 def test_hsts_header_is_set_when_enabled_and_request_is_https(
