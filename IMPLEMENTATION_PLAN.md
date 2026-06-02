@@ -359,11 +359,11 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Root `compose.yml`: build app, `WEATHER_PROVIDER=mock`, port map, no secrets required.
 
 **Acceptance criteria:**
-- [ ] `docker compose up --build` starts API
-- [ ] `GET /weather?city=London` works from host
+- [x] `docker compose up --build` starts API — root `compose.yml`; test `test_compose_up_serves_weather_from_host`
+- [x] `GET /weather?city=London` works from host — same integration test + README quickstart
 
 **Verification:**
-- [ ] `docker compose up -d && curl ...`
+- [x] `docker compose up -d && curl ...` — covered by `app/tests/test_compose.py` when Docker available
 
 **Dependencies:** Task 12
 
@@ -376,8 +376,8 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ### Checkpoint B: Containerized local API
 
-- [ ] `docker compose up --build` + curl weather/health
-- [ ] Document optional `uv run` path in `app/README.md` or root README stub
+- [x] `docker compose up --build` + curl weather/health — root `README.md` + compose integration tests
+- [x] Document optional `uv run` path in `app/README.md` or root README stub — root `README.md` + `app/README.md`
 
 ---
 

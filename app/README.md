@@ -4,6 +4,14 @@ Tracer FastAPI service for the containerized deployment reference implementation
 
 ## Local development
 
+**Docker Compose (primary)** — from the repository root:
+
+```bash
+docker compose up --build
+```
+
+**Optional native `uv run`** (fast iteration):
+
 ```bash
 cd app
 uv sync
@@ -52,7 +60,7 @@ Docker integration tests (skipped when Docker is unavailable):
 
 ```bash
 cd app
-uv run pytest tests/test_docker_image.py
+uv run pytest tests/test_docker_image.py tests/test_compose.py
 ```
 
 ## Tests
