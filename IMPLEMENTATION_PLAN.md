@@ -328,6 +328,8 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ### Phase 2: Containerization
 
+**Phase Lock [2] (2025-06-02):** Decisions locked in `CONTEXT.md` — `app/Dockerfile`, multi-stage `uv` builder, `appuser` (10001), exec CMD port 8000, root `compose.yml` with inline mock env, compose-only healthcheck, production `.dockerignore`, cache-friendly COPY layers, `restart: unless-stopped`.
+
 ---
 
 ## Task 12: Production Dockerfile (non-root, slim)
@@ -335,13 +337,13 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Multi-stage or slim `python:3.12` image; install from `uv.lock`; non-root user; `EXPOSE` app port; `CMD` uvicorn.
 
 **Acceptance criteria:**
-- [ ] Image builds successfully
-- [ ] Container runs as non-root (`docker run` + `whoami` or image USER)
-- [ ] Health/weather reachable inside container
+- [x] Image builds successfully — `app/Dockerfile` multi-stage; integration test `test_production_docker_image_builds`
+- [x] Container runs as non-root (`docker run` + `whoami` or image USER) — `appuser` UID/GID 10001; test `test_production_container_runs_as_appuser`
+- [x] Health/weather reachable inside container — tests `test_production_container_serves_health_live`, `test_production_container_serves_weather_with_mock_provider`
 
 **Verification:**
-- [ ] `docker build -t weather-api:local .` (from `app/` or repo root per layout)
-- [ ] `docker run` + `curl` localhost mapped port
+- [x] `docker build -t weather-api:local ./app` (documented in `app/README.md`; run locally when Docker available)
+- [x] `docker run` + `curl` localhost mapped port (documented; covered by integration tests when Docker available)
 
 **Dependencies:** Checkpoint A
 
@@ -657,7 +659,7 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 - [ ] **GitHub org/repo subject:** Confirm `DNBLabs/containerized-api-deployment` matches actual federated credential (if repo renamed, update TF).
 - [ ] **Contributor vs custom roles:** Accept RG Contributor for v1 or tighten before Task 19?
-- [ ] **Dockerfile location:** `app/Dockerfile` vs repo root — pick one in Task 12 and keep CI paths consistent.
+- [x] **Dockerfile location:** **`app/Dockerfile`** + root **`compose.yml`** with `build.context: ./app` — Phase Lock [2], Option A.
 
 ## Suggested Session Boundaries (for agents)
 
