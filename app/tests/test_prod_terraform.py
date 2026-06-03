@@ -1,4 +1,4 @@
-"""Terraform production main stack tests (Task 15).
+"""Terraform production main stack tests (Tasks 15–16).
 
 Public interface: terraform init (backend config file) and terraform validate in infra/envs/prod/.
 Remote backend apply requires bootstrap outputs and Azure auth (operator/CI).
@@ -30,6 +30,38 @@ PROD_SECURITY_PATTERNS = (
     r"storage_use_azuread\s*=\s*true",
     r'backend\s+"azurerm"\s+\{\s*\}',
     r"use_azuread_auth\s*=\s*true",
+)
+
+CONTEXT_PROD_RG_NAME = "rg-cad-prod-uksouth"
+CONTEXT_ACR_NAME = "acrcadprod"
+CONTEXT_KEY_VAULT_NAME = "kv-cad-prod-uks"
+
+ACR_SECURITY_PATTERNS = (
+    r"admin_enabled\s*=\s*false",
+    r'resource\s+"azurerm_container_registry"\s+"prod"',
+)
+
+KEY_VAULT_SECURITY_PATTERNS = (
+    r"rbac_authorization_enabled\s*=\s*true",
+    r'resource\s+"azurerm_key_vault"\s+"prod"',
+)
+
+KEY_VAULT_DATA_PLANE_HARDENING_PATTERNS = (
+    r"enabled_for_deployment\s*=\s*false",
+    r"enabled_for_template_deployment\s*=\s*false",
+    r"enabled_for_disk_encryption\s*=\s*false",
+    r'network_acls\s+\{',
+    r'default_action\s*=\s*length\(var\.key_vault_allowed_ip_ranges\)\s*>\s*0\s*\?\s*"Deny"\s*:\s*"Allow"',
+)
+
+FORBIDDEN_LEGACY_KV_PATTERNS = (
+    r'resource\s+"azurerm_key_vault_access_policy"',
+    r"enable_rbac_authorization\s*=\s*false",
+)
+
+FORBIDDEN_ACR_SECRET_OUTPUTS = (
+    "admin_password",
+    "admin_username",
 )
 
 FORBIDDEN_BACKEND_SECRET_KEYS = (
@@ -65,7 +97,10 @@ def _run_terraform(*args: str, cwd: Path = PROD_DIR) -> subprocess.CompletedProc
 def prod_initialized() -> None:
     """Initialize prod module without configuring the remote backend (CI-safe)."""
     assert PROD_DIR.is_dir(), "infra/envs/prod must exist"
-    init = _run_terraform("init", "-backend=false")
+    terraform_dir = PROD_DIR / ".terraform"
+    if terraform_dir.is_dir():
+        shutil.rmtree(terraform_dir)
+    init = _run_terraform("init", "-backend=false", "-reconfigure")
     assert init.returncode == 0, init.stderr or init.stdout
 
 
@@ -99,11 +134,82 @@ def test_prod_stack_backend_config_template_uses_entra_id() -> None:
 
 
 def test_prod_stack_plans_prod_resource_group_name() -> None:
-    """Skeleton locals match CONTEXT production resource group naming."""
+    """Locals and RG resource match CONTEXT production naming (default vars → rg-cad-prod-uksouth)."""
     main_tf = PROD_DIR / "main.tf"
     assert main_tf.is_file()
     contents = main_tf.read_text(encoding="utf-8")
     assert "rg-${var.prefix}-${var.environment}-${var.location}" in contents
+    assert re.search(r'resource\s+"azurerm_resource_group"\s+"prod"', contents)
+
+
+def test_prod_stack_core_resource_locals_match_context() -> None:
+    """Naming locals resolve to CONTEXT defaults: acrcadprod, kv-cad-prod-uks."""
+    main_tf = PROD_DIR / "main.tf"
+    contents = main_tf.read_text(encoding="utf-8")
+    assert 'acr_name       = "acr${var.prefix}${var.environment}"' in contents
+    assert 'key_vault_name = "kv-${var.prefix}-${var.environment}-uks"' in contents
+    assert CONTEXT_ACR_NAME == "acrcadprod"
+    assert CONTEXT_KEY_VAULT_NAME == "kv-cad-prod-uks"
+
+
+def test_prod_stack_declares_acr_with_context_name() -> None:
+    """ACR uses naming local and disables admin user (AcrPull-only path)."""
+    acr_tf = PROD_DIR / "acr.tf"
+    main_tf = PROD_DIR / "main.tf"
+    assert acr_tf.is_file(), "infra/envs/prod/acr.tf must exist"
+    contents = acr_tf.read_text(encoding="utf-8") + main_tf.read_text(encoding="utf-8")
+    assert "local.acr_name" in acr_tf.read_text(encoding="utf-8")
+    for pattern in ACR_SECURITY_PATTERNS:
+        assert re.search(pattern, contents), f"missing ACR setting: {pattern!r}"
+
+
+def test_prod_stack_declares_key_vault_rbac_ready() -> None:
+    """Key Vault uses naming local, RBAC auth, and no OpenWeatherMap secret in Terraform."""
+    keyvault_tf = PROD_DIR / "keyvault.tf"
+    variables_tf = PROD_DIR / "variables.tf"
+    assert keyvault_tf.is_file(), "infra/envs/prod/keyvault.tf must exist"
+    contents = keyvault_tf.read_text(encoding="utf-8") + variables_tf.read_text(encoding="utf-8")
+    assert "local.key_vault_name" in keyvault_tf.read_text(encoding="utf-8")
+    for pattern in KEY_VAULT_SECURITY_PATTERNS:
+        assert re.search(pattern, contents), f"missing Key Vault setting: {pattern!r}"
+    for pattern in KEY_VAULT_DATA_PLANE_HARDENING_PATTERNS:
+        assert re.search(pattern, contents), f"missing Key Vault hardening: {pattern!r}"
+    for pattern in FORBIDDEN_LEGACY_KV_PATTERNS:
+        assert not re.search(pattern, contents), f"forbidden Key Vault pattern: {pattern!r}"
+    assert "azurerm_key_vault_secret" not in contents
+
+
+def test_prod_stack_task16_security_notes_cover_acr_and_key_vault() -> None:
+    """security_notes output documents Task 16 ACR/KV controls for operators."""
+    outputs_tf = PROD_DIR / "outputs.tf"
+    contents = outputs_tf.read_text(encoding="utf-8")
+    for key in (
+        "acr_admin_disabled",
+        "key_vault_rbac",
+        "key_vault_secrets_in_tf",
+        "key_vault_manual_secret",
+    ):
+        assert key in contents, f"missing security_notes.{key}"
+
+
+def test_prod_stack_does_not_export_acr_admin_credentials() -> None:
+    """ACR admin is disabled; outputs must not expose admin_username/admin_password."""
+    outputs_tf = PROD_DIR / "outputs.tf"
+    contents = outputs_tf.read_text(encoding="utf-8")
+    for forbidden in FORBIDDEN_ACR_SECRET_OUTPUTS:
+        assert forbidden not in contents, f"outputs.tf must not reference {forbidden!r}"
+
+
+def test_prod_stack_outputs_core_azure_resource_names() -> None:
+    """Outputs expose RG, ACR, and Key Vault names for operators and downstream tasks."""
+    outputs_tf = PROD_DIR / "outputs.tf"
+    contents = outputs_tf.read_text(encoding="utf-8")
+    for name in ("acr_name", "key_vault_name", "key_vault_id", "acr_login_server"):
+        assert re.search(rf'output\s+"{re.escape(name)}"\s+\{{', contents), (
+            f'missing output "{name}" in outputs.tf'
+        )
+    assert "azurerm_container_registry.prod.name" in contents
+    assert "azurerm_key_vault.prod" in contents
 
 
 def test_prod_stack_remote_state_security_contract() -> None:

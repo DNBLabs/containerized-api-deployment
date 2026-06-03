@@ -81,9 +81,43 @@ Covered by `app/tests/test_prod_terraform.py`.
 | `environment` | `prod` | Environment segment |
 | `tags` | see `variables.tf` | Resource tags |
 
-Planned resource group: `rg-cad-prod-uksouth` (created in Task 16).
+Production resource group: `rg-cad-prod-uksouth` (Task 16).
+
+## Core resources (Task 16)
+
+| Resource | Name | Notes |
+|----------|------|--------|
+| Resource group | `rg-cad-prod-uksouth` | `azurerm_resource_group.prod` |
+| Container registry | `acrcadprod` | `admin_enabled = false` — AcrPull via MI (Task 18) |
+| Key Vault | `kv-cad-prod-uks` | RBAC; no secrets in TF; unused KV integrations off; optional IP deny via `key_vault_allowed_ip_ranges` |
+
+After apply, set the upstream weather API key manually (not in git or TF):
+
+```bash
+az keyvault secret set --vault-name kv-cad-prod-uks --name OPENWEATHERMAP_API_KEY --value "<your-key>"
+```
+
+Verify plan (requires bootstrap + `backend.hcl` + `ARM_USE_AZUREAD=true`):
+
+```powershell
+$env:ARM_USE_AZUREAD = "true"
+terraform plan
+```
+
+Outputs: `terraform output acr_name`, `key_vault_name`, `acr_login_server`, `security_notes`.
+
+### Task 16 security (v1)
+
+| Control | Setting |
+|---------|---------|
+| ACR admin user | `admin_enabled = false` (AcrPull via MI in Task 18) |
+| ACR network | Basic SKU — public endpoint for CI push; private link deferred |
+| KV auth | `rbac_authorization_enabled = true` (no access policies) |
+| KV secrets in TF | None — manual `OPENWEATHERMAP_API_KEY` only |
+| KV integrations | Deployment/template/disk encryption disabled |
+| KV network | `Allow` + RBAC by default; set `key_vault_allowed_ip_ranges` in `terraform.tfvars` for Deny-by-default |
+| KV purge protection | Off (easier teardown); enable for long-lived prod if needed |
 
 ## Next tasks
 
-- **Task 16:** `azurerm_resource_group`, ACR, Key Vault
 - **Task 17–19:** ACA, identities, OIDC

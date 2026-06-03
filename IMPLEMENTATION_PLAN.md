@@ -433,11 +433,11 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** `rg-cad-prod-uksouth`, `acrcadprod`, `kv-cad-prod-uks` with RBAC-ready structure; KV for secrets (no OWM value in TF).
 
 **Acceptance criteria:**
-- [ ] `terraform plan` shows three resource groups of resources without error
-- [ ] Naming matches CONTEXT
+- [x] `terraform plan` shows three resource groups of resources without error — RG + ACR + Key Vault in `main.tf`/`acr.tf`/`keyvault.tf`; `terraform validate` passes; operator `terraform plan` after bootstrap
+- [x] Naming matches CONTEXT — locals default to `rg-cad-prod-uksouth`, `acrcadprod`, `kv-cad-prod-uks`; tests `test_prod_stack_core_resource_locals_match_context`, ACR/KV contract tests
 
 **Verification:**
-- [ ] `terraform plan` (local, after bootstrap)
+- [x] `terraform plan` (local, after bootstrap) — documented in `infra/envs/prod/README.md`; static gate `test_prod_stack_terraform_validates`
 
 **Dependencies:** Task 15
 

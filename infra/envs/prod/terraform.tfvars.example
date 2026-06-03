@@ -2,3 +2,6 @@
 # location    = "uksouth"
 # prefix      = "cad"
 # environment = "prod"
+#
+# Optional: restrict Key Vault data-plane to operator IP (Deny default when set).
+# key_vault_allowed_ip_ranges = ["203.0.113.10/32"]
