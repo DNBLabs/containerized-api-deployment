@@ -1,4 +1,4 @@
-# Outputs for operator verification and downstream documentation (Tasks 15–16).
+# Outputs for operator verification and downstream documentation (Tasks 15–17).
 
 output "resource_group_name" {
   description = "Production resource group name."
@@ -23,6 +23,21 @@ output "key_vault_name" {
 output "key_vault_id" {
   description = "Key Vault resource ID for RBAC assignments (Tasks 18–19)."
   value       = azurerm_key_vault.prod.id
+}
+
+output "container_app_environment_name" {
+  description = "Container Apps environment name (CONTEXT: cae-cad-prod-uksouth)."
+  value       = azurerm_container_app_environment.prod.name
+}
+
+output "container_app_name" {
+  description = "Container app name (CONTEXT: ca-weather-api-prod)."
+  value       = azurerm_container_app.weather_api.name
+}
+
+output "container_app_fqdn" {
+  description = "Public HTTPS FQDN for the weather API (ACA default ingress)."
+  value       = azurerm_container_app.weather_api.latest_revision_fqdn
 }
 
 output "location" {
@@ -53,6 +68,12 @@ output "security_notes" {
     key_vault_manual_secret      = "OPENWEATHERMAP_API_KEY via az keyvault secret set after apply (never in git/CI logs)"
     key_vault_network            = length(var.key_vault_allowed_ip_ranges) > 0 ? "Deny default + ip_rules" : "Allow default (RBAC required); set key_vault_allowed_ip_ranges to tighten"
     key_vault_purge_protection   = "disabled for portfolio teardown; enable for long-lived prod if destroy not needed"
+    aca_scale                    = "minReplicas=1 maxReplicas=3; no custom scale rules in v1"
+    aca_probes                   = "/health/live (liveness), /health/ready (readiness) on port 8000"
+    aca_image_placeholder        = "container_image defaults to public MCR quickstart until CI deploy (Tasks 21–22)"
+    aca_ingress_https_only       = true
+    aca_secrets_in_tf            = false
+    aca_hsts                     = "ENABLE_HSTS=true on ACA template (CONTEXT prod)"
   }
 }
 

@@ -104,7 +104,7 @@ $env:ARM_USE_AZUREAD = "true"
 terraform plan
 ```
 
-Outputs: `terraform output acr_name`, `key_vault_name`, `acr_login_server`, `security_notes`.
+Outputs: `terraform output acr_name`, `key_vault_name`, `acr_login_server`, `container_app_fqdn`, `security_notes`.
 
 ### Task 16 security (v1)
 
@@ -118,6 +118,19 @@ Outputs: `terraform output acr_name`, `key_vault_name`, `acr_login_server`, `sec
 | KV network | `Allow` + RBAC by default; set `key_vault_allowed_ip_ranges` in `terraform.tfvars` for Deny-by-default |
 | KV purge protection | Off (easier teardown); enable for long-lived prod if needed |
 
+## Core resources (Task 17)
+
+| Resource | Name | Notes |
+|----------|------|--------|
+| Container Apps environment | `cae-cad-prod-uksouth` | Consumption profile (default) |
+| Container app | `ca-weather-api-prod` | Public HTTPS ingress; `min_replicas=1`, `max_replicas=3` |
+| Health probes | `/health/live`, `/health/ready` | Port **8000** (matches uvicorn bind) |
+| Ingress | HTTPS only | `allow_insecure_connections = false` |
+| HSTS | `ENABLE_HSTS=true` | App emits Strict-Transport-Security behind ACA TLS |
+| Image | `container_image` var | Default MCR quickstart placeholder until CI deploy (Tasks 21–22); validated at TF boundary |
+
+Task 18 adds system-assigned MI, AcrPull, `WEATHER_PROVIDER=openweathermap`, and Key Vault secret ref.
+
 ## Next tasks
 
-- **Task 17–19:** ACA, identities, OIDC
+- **Task 18–19:** Runtime MI + secrets, GitHub OIDC

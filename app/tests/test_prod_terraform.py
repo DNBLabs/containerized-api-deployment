@@ -1,4 +1,4 @@
-"""Terraform production main stack tests (Tasks 15–16).
+"""Terraform production main stack tests (Tasks 15–17).
 
 Public interface: terraform init (backend config file) and terraform validate in infra/envs/prod/.
 Remote backend apply requires bootstrap outputs and Azure auth (operator/CI).
@@ -35,6 +35,38 @@ PROD_SECURITY_PATTERNS = (
 CONTEXT_PROD_RG_NAME = "rg-cad-prod-uksouth"
 CONTEXT_ACR_NAME = "acrcadprod"
 CONTEXT_KEY_VAULT_NAME = "kv-cad-prod-uks"
+CONTEXT_CAE_NAME = "cae-cad-prod-uksouth"
+CONTEXT_CONTAINER_APP_NAME = "ca-weather-api-prod"
+
+ACA_RESOURCE_PATTERNS = (
+    r'resource\s+"azurerm_container_app_environment"\s+"prod"',
+    r'resource\s+"azurerm_container_app"\s+"weather_api"',
+)
+
+ACA_INGRESS_AND_SCALE_PATTERNS = (
+    r"external_enabled\s*=\s*true",
+    r"target_port\s*=\s*8000",
+    r"min_replicas\s*=\s*1",
+    r"max_replicas\s*=\s*3",
+)
+
+ACA_PROBE_PATTERNS = (
+    r'liveness_probe\s+\{[^}]*path\s*=\s*"/health/live"[^}]*port\s*=\s*8000',
+    r'readiness_probe\s+\{[^}]*path\s*=\s*"/health/ready"[^}]*port\s*=\s*8000',
+)
+
+ACA_SECURITY_PATTERNS = (
+    r"allow_insecure_connections\s*=\s*false",
+    r'name\s*=\s*"ENABLE_HSTS"',
+    r'value\s*=\s*"true"',
+    r"validation\s+\{",
+)
+
+FORBIDDEN_ACA_SECRET_PATTERNS = (
+    r'secret\s+\{[^}]*value\s*=',
+    r"password_secret_name\s*=",
+    r"OPENWEATHERMAP_API_KEY",
+)
 
 ACR_SECURITY_PATTERNS = (
     r"admin_enabled\s*=\s*false",
@@ -231,3 +263,51 @@ def test_prod_stack_remote_state_security_contract() -> None:
             f"backend.hcl.example must not set {forbidden!r}"
         )
     assert re.search(r'output\s+"security_notes"\s+\{', outputs_tf.read_text(encoding="utf-8"))
+
+
+def test_prod_stack_declares_aca_environment_and_container_app() -> None:
+    """Task 17: ACA env + app with CONTEXT names, public ingress, scale bounds, health probes."""
+    aca_tf = PROD_DIR / "aca.tf"
+    main_tf = PROD_DIR / "main.tf"
+    assert aca_tf.is_file(), "infra/envs/prod/aca.tf must exist"
+    aca_contents = aca_tf.read_text(encoding="utf-8")
+    main_contents = main_tf.read_text(encoding="utf-8")
+    combined = aca_contents + main_contents
+    assert 'cae_name       = "cae-${var.prefix}-${var.environment}-${var.location}"' in main_contents
+    assert 'container_app_name = "ca-weather-api-${var.environment}"' in main_contents
+    assert CONTEXT_CAE_NAME == "cae-cad-prod-uksouth"
+    assert CONTEXT_CONTAINER_APP_NAME == "ca-weather-api-prod"
+    assert "local.cae_name" in aca_contents
+    assert "local.container_app_name" in aca_contents
+    for pattern in ACA_RESOURCE_PATTERNS:
+        assert re.search(pattern, aca_contents), f"missing ACA resource: {pattern!r}"
+    for pattern in ACA_INGRESS_AND_SCALE_PATTERNS:
+        assert re.search(pattern, aca_contents), f"missing ACA ingress/scale: {pattern!r}"
+    for pattern in ACA_PROBE_PATTERNS:
+        assert re.search(pattern, aca_contents, re.DOTALL), f"missing ACA probe: {pattern!r}"
+
+
+def test_prod_stack_outputs_aca_ingress_fqdn() -> None:
+    """Task 17: outputs expose ACA ingress FQDN for operators and README live URL."""
+    outputs_tf = PROD_DIR / "outputs.tf"
+    contents = outputs_tf.read_text(encoding="utf-8")
+    assert re.search(r'output\s+"container_app_fqdn"\s+\{', contents), (
+        'missing output "container_app_fqdn" in outputs.tf'
+    )
+    assert "azurerm_container_app.weather_api.latest_revision_fqdn" in contents
+    assert re.search(r'output\s+"container_app_name"\s+\{', contents)
+    assert re.search(r'output\s+"container_app_environment_name"\s+\{', contents)
+
+
+def test_prod_stack_aca_security_contract() -> None:
+    """Task 17: ACA skeleton has HTTPS-only ingress, HSTS env, no secrets in Terraform."""
+    aca_tf = PROD_DIR / "aca.tf"
+    outputs_tf = PROD_DIR / "outputs.tf"
+    aca_contents = aca_tf.read_text(encoding="utf-8")
+    notes_contents = outputs_tf.read_text(encoding="utf-8")
+    for pattern in ACA_SECURITY_PATTERNS:
+        assert re.search(pattern, aca_contents), f"missing ACA security setting: {pattern!r}"
+    for pattern in FORBIDDEN_ACA_SECRET_PATTERNS:
+        assert not re.search(pattern, aca_contents), f"forbidden ACA pattern: {pattern!r}"
+    for key in ("aca_ingress_https_only", "aca_secrets_in_tf", "aca_hsts"):
+        assert key in notes_contents, f"missing security_notes.{key}"

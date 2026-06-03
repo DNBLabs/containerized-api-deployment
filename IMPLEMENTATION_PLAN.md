@@ -453,11 +453,12 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** `cae-cad-prod-uksouth`, `ca-weather-api-prod`, public ingress, `minReplicas=1`, `maxReplicas=3`, probes pointing to `/health/live` and `/health/ready`.
 
 **Acceptance criteria:**
-- [ ] Plan includes ACA env + app with ingress FQDN output
-- [ ] Probe paths match app routes
+- [x] Plan includes ACA env + app with ingress FQDN output — `aca.tf`; outputs `container_app_fqdn`, `container_app_name`, `container_app_environment_name`; tests `test_prod_stack_declares_aca_environment_and_container_app`, `test_prod_stack_outputs_aca_ingress_fqdn`
+- [x] Probe paths match app routes — liveness `/health/live`, readiness `/health/ready`, port 8000; same ACA contract test
+- [x] Security contract — HTTPS-only ingress (`allow_insecure_connections = false`), `ENABLE_HSTS=true`, no secrets in TF, `container_image` validation; test `test_prod_stack_aca_security_contract`
 
 **Verification:**
-- [ ] `terraform plan` review
+- [x] `terraform plan` review — `terraform validate` passes; operator plan after apply documented in README
 
 **Dependencies:** Task 16
 
