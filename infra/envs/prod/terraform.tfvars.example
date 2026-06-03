@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars (gitignored) to override defaults.
+# location    = "uksouth"
+# prefix      = "cad"
+# environment = "prod"

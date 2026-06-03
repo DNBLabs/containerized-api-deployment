@@ -42,6 +42,9 @@ terraform.rc
 infra/bootstrap/terraform.tfstate
 infra/bootstrap/terraform.tfstate.*
 
+# Main stack remote backend config (operator-specific; use backend.hcl.example)
+infra/envs/prod/backend.hcl
+
 # IDE / OS
 .idea/
 .vscode/

@@ -412,11 +412,12 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** `infra/envs/prod/` (or `infra/prod/`) with `azurerm` backend block pointing at bootstrap outputs; variables for location, prefix `cad`, tags.
 
 **Acceptance criteria:**
-- [ ] `terraform init` succeeds after bootstrap
-- [ ] `terraform validate` passes
+- [x] `terraform init` succeeds after bootstrap — remote backend configured; `ARM_USE_AZUREAD=true`; Blob Data Contributor on `stcadprodtf`; state blob `prod.terraform.tfstate` in `tfstate`
+- [x] `terraform validate` passes — `app/tests/test_prod_terraform.py` + local `terraform validate`
+- [x] Remote backend security documented — Entra-only backend template, `storage_use_azuread`, gitignored `backend.hcl`, `security_notes` output; test `test_prod_stack_remote_state_security_contract`; README security section
 
 **Verification:**
-- [ ] `terraform validate` in main stack
+- [x] `terraform validate` in main stack — `test_prod_stack_terraform_validates`
 
 **Dependencies:** Task 14
 

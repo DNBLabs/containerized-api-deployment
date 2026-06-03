@@ -1,0 +1,13 @@
+# Copy to backend.hcl (gitignored) after bootstrap apply.
+# Values from: cd ../../bootstrap && terraform output -json backend_config
+#
+# PowerShell: $env:ARM_USE_AZUREAD = "true"
+# terraform init -backend-config=backend.hcl -reconfigure
+#
+# SECURITY: use_azuread_auth only. Do NOT add access_key or storage_account_key.
+
+resource_group_name  = "rg-cad-tfstate-uksouth"
+storage_account_name = "stcadprodtf"
+container_name       = "tfstate"
+key                  = "prod.terraform.tfstate"
+use_azuread_auth     = true

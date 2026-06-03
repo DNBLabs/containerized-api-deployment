@@ -77,7 +77,7 @@ terraform output
 terraform output -json backend_config
 ```
 
-Use these values in `infra/envs/prod/` `backend "azurerm"` block (Task 15):
+Use these values in `infra/envs/prod/backend.hcl` (Task 15 — see [`../envs/prod/README.md`](../envs/prod/README.md)):
 
 | Output | Purpose |
 |--------|---------|
