@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars (gitignored) and customize.
+# location = "uksouth"
+# prefix   = "cad"
+
+# Required if default is taken globally (409 StorageAccountAlreadyTaken):
+storage_account_name = "stcadprodtf7k2m"

@@ -390,12 +390,13 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** Per ADR 0001: storage account + container for TF state; outputs for backend config; gitignore local `*.tfstate*`.
 
 **Acceptance criteria:**
-- [ ] `terraform init && terraform apply` succeeds (operator, `uksouth`)
-- [ ] Outputs document backend storage account/container names
+- [x] `terraform init && terraform apply` succeeds (operator, `uksouth`) — `stcadprodtf` + `tfstate` container in `rg-cad-tfstate-uksouth`; operator verified apply/teardown
+- [x] Outputs document backend storage account/container names — `outputs.tf` + `README.md`; test `test_bootstrap_declares_backend_config_outputs`
+- [x] State storage hardened — account keys off, TLS 1.2+, private container, infra encryption, Azure AD backend + `storage_use_azuread`; test `test_bootstrap_storage_account_security_contract`; README security/troubleshooting
 
 **Verification:**
-- [ ] `terraform validate` in bootstrap dir
-- [ ] Manual apply in personal subscription (documented, not CI)
+- [x] `terraform validate` in bootstrap dir — `app/tests/test_bootstrap_terraform.py` + local `terraform validate`
+- [x] Manual apply in personal subscription (documented, not CI) — operator apply succeeded; README teardown documented
 
 **Dependencies:** None (Day-0; can parallelize with Phase 1–2 in separate session)
 
