@@ -1,4 +1,4 @@
-# Outputs for operator verification and downstream documentation (Tasks 15–18).
+# Outputs for operator verification and downstream documentation (Tasks 15–19).
 
 output "resource_group_name" {
   description = "Production resource group name."
@@ -40,6 +40,16 @@ output "container_app_fqdn" {
   value       = azurerm_container_app.weather_api.latest_revision_fqdn
 }
 
+output "github_ci_client_id" {
+  description = "Client ID for id-cad-github-prod (GitHub Actions azure/login OIDC; not a secret)."
+  value       = azurerm_user_assigned_identity.github_ci.client_id
+}
+
+output "github_ci_identity_name" {
+  description = "User-assigned identity name for GitHub Actions (CONTEXT: id-cad-github-prod)."
+  value       = azurerm_user_assigned_identity.github_ci.name
+}
+
 output "location" {
   description = "Azure region for the production stack."
   value       = var.location
@@ -58,7 +68,10 @@ output "security_notes" {
     backend_config_gitignored    = true
     state_contains_secrets       = true
     operator_rbac_on_state_store = "Storage Blob Data Contributor on bootstrap storage account (least privilege for state blob access)"
-    ci_rbac_future               = "Task 19: id-cad-github-prod scoped to rg-cad-prod-uksouth; separate Blob Data Contributor on state account for terraform init/plan/apply"
+    ci_rbac                      = "id-cad-github-prod Contributor on rg-cad-prod-uksouth; grant Storage Blob Data Contributor on state account separately for terraform init/plan/apply"
+    ci_oidc_federation           = "repo:DNBLabs/containerized-api-deployment:ref:refs/heads/main only (no client secrets in TF or GitHub)"
+    ci_oidc_no_static_credentials = "OIDC only — no long-lived Azure credentials in TF or GitHub"
+    ci_contributor_scope_v1      = "RG Contributor accepted for v1 portfolio; tighten to custom roles in future ADR"
     local_init_env_windows       = "ARM_USE_AZUREAD=true before terraform init -backend-config=backend.hcl"
     acr_admin_disabled           = true
     acr_pull_auth                = "ACA system-assigned MI + AcrPull on acrcadprod (no admin user)"

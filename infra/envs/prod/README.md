@@ -11,7 +11,7 @@ Main infrastructure for the tracer API in Azure. Uses **remote state** in the st
 | Secrets in git | `backend.hcl` and `terraform.tfvars` are **gitignored** — use `.example` templates only |
 | State sensitivity | `prod.terraform.tfstate` blob may contain secrets after Task 16+ — never commit `*.tfstate*` |
 | Operator RBAC | **Storage Blob Data Contributor** on bootstrap storage account (not subscription Owner for daily use) |
-| CI (Task 19) | `id-cad-github-prod` — prod RG scoped; state store needs separate Blob Data Contributor for Terraform |
+| CI (Task 19) | `id-cad-github-prod` — Contributor on prod RG; grant **Storage Blob Data Contributor** on bootstrap state account separately for Terraform in CI |
 
 Run `terraform output security_notes` after apply for a machine-readable checklist.
 
@@ -147,6 +147,27 @@ az keyvault secret set --vault-name kv-cad-prod-uks --name openweathermap-api-ke
 
 RBAC propagation can take ~15s. Re-check readiness on the ACA FQDN after the secret exists.
 
+## Task 19: GitHub OIDC + CI RBAC
+
+| Control | Setting |
+|---------|---------|
+| CI identity | `id-cad-github-prod` (user-assigned) |
+| OIDC trust | `repo:DNBLabs/containerized-api-deployment:ref:refs/heads/main` only |
+| RBAC | **Contributor** on `rg-cad-prod-uksouth` (v1; not subscription-wide) |
+| State store | Grant **Storage Blob Data Contributor** on bootstrap storage account separately (not in this stack) |
+| GitHub secret | None — use `azure/login` with OIDC + `terraform output github_ci_client_id` |
+| Variable validation | `github_organization` / `github_repository` reject `/`, `:`, `*`, and OIDC abuse tokens |
+| Known v1 risk | RG **Contributor** is broad — acceptable for portfolio; document before tightening roles |
+
+After apply:
+
+```bash
+terraform output github_ci_client_id
+terraform output github_ci_identity_name
+```
+
+Use the client ID in GitHub Actions workflows (Tasks 20–22). No Azure client secret is created or stored in Terraform.
+
 ## Next tasks
 
-- **Task 19:** GitHub OIDC + CI RBAC
+- **Task 20:** CI workflow — test, ruff, mypy

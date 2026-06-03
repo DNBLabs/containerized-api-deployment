@@ -1,4 +1,4 @@
-"""Terraform production main stack tests (Tasks 15–18).
+"""Terraform production main stack tests (Tasks 15–19).
 
 Public interface: terraform init (backend config file) and terraform validate in infra/envs/prod/.
 Remote backend apply requires bootstrap outputs and Azure auth (operator/CI).
@@ -37,6 +37,44 @@ CONTEXT_ACR_NAME = "acrcadprod"
 CONTEXT_KEY_VAULT_NAME = "kv-cad-prod-uks"
 CONTEXT_CAE_NAME = "cae-cad-prod-uksouth"
 CONTEXT_CONTAINER_APP_NAME = "ca-weather-api-prod"
+CONTEXT_GITHUB_CI_IDENTITY_NAME = "id-cad-github-prod"
+CONTEXT_GITHUB_ORG = "DNBLabs"
+CONTEXT_GITHUB_REPO = "containerized-api-deployment"
+
+TASK19_GITHUB_IDENTITY_PATTERNS = (
+    r'resource\s+"azurerm_user_assigned_identity"\s+"github_ci"',
+    rf'name\s*=\s*"{re.escape(CONTEXT_GITHUB_CI_IDENTITY_NAME)}"',
+)
+
+TASK19_FEDERATED_CREDENTIAL_PATTERNS = (
+    r'resource\s+"azurerm_federated_identity_credential"\s+"github_main"',
+    r'issuer\s*=\s*"https://token\.actions\.githubusercontent\.com"',
+    r'audience\s*=\s*\["api://AzureADTokenExchange"\]',
+    r"subject\s*=\s*local\.github_federated_subject",
+)
+
+TASK19_FORBIDDEN_OIDC_PATTERNS = (
+    r"azurerm_client_secret",
+    r"client_secret\s*=",
+    r"password\s*=",
+    r"subject\s*=.*pull_request",
+    r"subject\s*=.*environment:",
+    r"ref:refs/heads/\*",
+    r'resource\s+"azurerm_federated_identity_credential"[^}]*subject\s*=\s*"[^"]*\*',
+)
+
+TASK19_CI_RBAC_PATTERNS = (
+    r'resource\s+"azurerm_role_assignment"\s+"github_ci_rg_contributor"',
+    r'role_definition_name\s*=\s*"Contributor"',
+    r"azurerm_resource_group\.prod\.id",
+    r"azurerm_user_assigned_identity\.github_ci\.principal_id",
+)
+
+FORBIDDEN_GITHUB_OIDC_OUTPUTS = (
+    "client_secret",
+    "azurerm_client_secret",
+    "password",
+)
 
 ACA_RESOURCE_PATTERNS = (
     r'resource\s+"azurerm_container_app_environment"\s+"prod"',
@@ -365,3 +403,63 @@ def test_prod_stack_aca_weather_provider_and_kv_secret_ref() -> None:
     assert "azurerm_key_vault_secret" not in kv_contents + aca_contents
     for pattern in FORBIDDEN_ACA_SECRET_PATTERNS:
         assert not re.search(pattern, aca_contents), f"forbidden ACA secret pattern: {pattern!r}"
+
+
+def test_prod_stack_declares_github_ci_identity() -> None:
+    """Task 19: CI user-assigned identity id-cad-github-prod for GitHub Actions OIDC."""
+    github_oidc_tf = PROD_DIR / "github_oidc.tf"
+    assert github_oidc_tf.is_file(), "infra/envs/prod/github_oidc.tf must exist"
+    contents = github_oidc_tf.read_text(encoding="utf-8")
+    for pattern in TASK19_GITHUB_IDENTITY_PATTERNS:
+        assert re.search(pattern, contents), f"missing GitHub CI identity: {pattern!r}"
+
+
+def test_prod_stack_github_oidc_federated_credential_main_only() -> None:
+    """Task 19: federated trust limited to main branch on DNBLabs/containerized-api-deployment."""
+    github_oidc_tf = PROD_DIR / "github_oidc.tf"
+    oidc_contents = github_oidc_tf.read_text(encoding="utf-8")
+    for pattern in TASK19_FEDERATED_CREDENTIAL_PATTERNS:
+        assert re.search(pattern, oidc_contents), f"missing federated credential: {pattern!r}"
+    assert 'default     = "DNBLabs"' in oidc_contents
+    assert 'default     = "containerized-api-deployment"' in oidc_contents
+    assert "strcontains(lower(var.github_organization), \"pull_request\")" in oidc_contents
+    assert "local.github_federated_subject" in oidc_contents
+
+
+def test_prod_stack_github_ci_rg_contributor_rbac() -> None:
+    """Task 19: CI identity Contributor on prod resource group only (not subscription-wide)."""
+    github_oidc_tf = PROD_DIR / "github_oidc.tf"
+    contents = github_oidc_tf.read_text(encoding="utf-8")
+    for pattern in TASK19_CI_RBAC_PATTERNS:
+        assert re.search(pattern, contents), f"missing CI RBAC: {pattern!r}"
+    assert "azurerm_subscription" not in contents
+
+
+def test_prod_stack_github_oidc_outputs_without_secrets() -> None:
+    """Task 19: expose CI client_id for workflows; never client secrets in Terraform outputs."""
+    outputs_tf = PROD_DIR / "outputs.tf"
+    github_oidc_tf = PROD_DIR / "github_oidc.tf"
+    outputs_contents = outputs_tf.read_text(encoding="utf-8")
+    oidc_contents = github_oidc_tf.read_text(encoding="utf-8")
+    assert re.search(r'output\s+"github_ci_client_id"\s+\{', outputs_contents)
+    assert "azurerm_user_assigned_identity.github_ci.client_id" in outputs_contents
+    for forbidden in FORBIDDEN_GITHUB_OIDC_OUTPUTS:
+        assert forbidden not in outputs_contents, f"outputs.tf must not reference {forbidden!r}"
+        assert forbidden not in oidc_contents, f"github_oidc.tf must not reference {forbidden!r}"
+    assert "ci_rbac_future" not in outputs_contents
+    assert "ci_rbac" in outputs_contents
+
+
+def test_prod_stack_github_oidc_security_contract() -> None:
+    """Task 19: OIDC federation and CI RBAC meet CONTEXT security boundaries."""
+    github_oidc_tf = PROD_DIR / "github_oidc.tf"
+    outputs_tf = PROD_DIR / "outputs.tf"
+    oidc_contents = github_oidc_tf.read_text(encoding="utf-8")
+    notes_contents = outputs_tf.read_text(encoding="utf-8")
+    assert oidc_contents.count('resource "azurerm_federated_identity_credential"') == 1
+    assert "local.github_federated_subject" in oidc_contents
+    assert ':ref:refs/heads/main"' in oidc_contents
+    for pattern in TASK19_FORBIDDEN_OIDC_PATTERNS:
+        assert not re.search(pattern, oidc_contents), f"forbidden GitHub OIDC pattern: {pattern!r}"
+    for key in ("ci_rbac", "ci_oidc_federation", "ci_oidc_no_static_credentials", "ci_contributor_scope_v1"):
+        assert key in notes_contents, f"missing security_notes.{key}"

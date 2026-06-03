@@ -495,11 +495,12 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** `id-cad-github-prod`, federated credential for `repo:DNBLabs/containerized-api-deployment:ref:refs/heads/main`, role assignments on `rg-cad-prod-uksouth` (Contributor or documented subset).
 
 **Acceptance criteria:**
-- [ ] No client secret outputs in Terraform
-- [ ] Federated subject matches repo + `main` only
+- [x] No client secret outputs in Terraform — `github_ci_client_id` only; test `test_prod_stack_github_oidc_outputs_without_secrets`
+- [x] Federated subject matches repo + `main` only — `repo:DNBLabs/containerized-api-deployment:ref:refs/heads/main`; test `test_prod_stack_github_oidc_federated_credential_main_only`
 
 **Verification:**
-- [ ] `terraform plan` shows UAMI + federated credential + role assignment
+- [x] `terraform validate` + contract tests — 21/21 `test_prod_terraform.py` (incl. `test_prod_stack_github_oidc_security_contract`)
+- [x] `terraform plan` shows UAMI + federated credential + role assignment — applied 2025-06-03 (3 added, 0 changed)
 
 **Dependencies:** Task 16
 
@@ -660,8 +661,8 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ## Open Questions
 
-- [ ] **GitHub org/repo subject:** Confirm `DNBLabs/containerized-api-deployment` matches actual federated credential (if repo renamed, update TF).
-- [ ] **Contributor vs custom roles:** Accept RG Contributor for v1 or tighten before Task 19?
+- [ ] **GitHub org/repo subject:** Confirm `DNBLabs/containerized-api-deployment` matches actual federated credential (if repo renamed, update TF vars).
+- [x] **Contributor vs custom roles:** RG **Contributor** for v1 on `rg-cad-prod-uksouth` (Task 19); tighten in future ADR if needed.
 - [x] **Dockerfile location:** **`app/Dockerfile`** + root **`compose.yml`** with `build.context: ./app` — Phase Lock [2], Option A.
 
 ## Suggested Session Boundaries (for agents)
