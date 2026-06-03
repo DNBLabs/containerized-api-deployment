@@ -1,4 +1,4 @@
-"""Terraform production main stack tests (Tasks 15–17).
+"""Terraform production main stack tests (Tasks 15–18).
 
 Public interface: terraform init (backend config file) and terraform validate in infra/envs/prod/.
 Remote backend apply requires bootstrap outputs and Azure auth (operator/CI).
@@ -65,7 +65,20 @@ ACA_SECURITY_PATTERNS = (
 FORBIDDEN_ACA_SECRET_PATTERNS = (
     r'secret\s+\{[^}]*value\s*=',
     r"password_secret_name\s*=",
-    r"OPENWEATHERMAP_API_KEY",
+    r"azurerm_key_vault_secret",
+)
+
+TASK18_ACA_IDENTITY_PATTERNS = (
+    r'identity\s+\{',
+    r'type\s*=\s*"SystemAssigned, UserAssigned"',
+)
+
+TASK18_RBAC_PATTERNS = (
+    r'resource\s+"azurerm_role_assignment"\s+"aca_acr_pull"',
+    r'role_definition_name\s*=\s*"AcrPull"',
+    r'resource\s+"azurerm_role_assignment"\s+"aca_key_vault_secrets_user"',
+    r'role_definition_name\s*=\s*"Key Vault Secrets User"',
+    r"azurerm_container_app\.weather_api\.identity\[0\]\.principal_id",
 )
 
 ACR_SECURITY_PATTERNS = (
@@ -311,3 +324,44 @@ def test_prod_stack_aca_security_contract() -> None:
         assert not re.search(pattern, aca_contents), f"forbidden ACA pattern: {pattern!r}"
     for key in ("aca_ingress_https_only", "aca_secrets_in_tf", "aca_hsts"):
         assert key in notes_contents, f"missing security_notes.{key}"
+
+
+def test_prod_stack_aca_runtime_identity_and_acr_pull() -> None:
+    """Task 18: system-assigned MI on ACA and AcrPull RBAC (no ACR admin)."""
+    aca_tf = PROD_DIR / "aca.tf"
+    rbac_tf = PROD_DIR / "rbac.tf"
+    acr_tf = PROD_DIR / "acr.tf"
+    assert rbac_tf.is_file(), "infra/envs/prod/rbac.tf must exist"
+    aca_contents = aca_tf.read_text(encoding="utf-8")
+    rbac_contents = rbac_tf.read_text(encoding="utf-8")
+    acr_contents = acr_tf.read_text(encoding="utf-8")
+    for pattern in TASK18_ACA_IDENTITY_PATTERNS:
+        assert re.search(pattern, aca_contents), f"missing ACA identity: {pattern!r}"
+    for pattern in TASK18_RBAC_PATTERNS:
+        assert re.search(pattern, rbac_contents), f"missing runtime RBAC: {pattern!r}"
+    assert re.search(r"admin_enabled\s*=\s*false", acr_contents)
+    assert "azurerm_container_registry.prod.id" in rbac_contents
+
+
+def test_prod_stack_aca_weather_provider_and_kv_secret_ref() -> None:
+    """Task 18: prod provider mode and OPENWEATHERMAP_API_KEY via Key Vault ref (no value in TF)."""
+    aca_tf = PROD_DIR / "aca.tf"
+    keyvault_tf = PROD_DIR / "keyvault.tf"
+    aca_contents = aca_tf.read_text(encoding="utf-8")
+    kv_contents = keyvault_tf.read_text(encoding="utf-8")
+    assert re.search(
+        r'name\s*=\s*"WEATHER_PROVIDER"[^}]*value\s*=\s*"openweathermap"',
+        aca_contents,
+        re.DOTALL,
+    ), "missing WEATHER_PROVIDER=openweathermap env"
+    assert re.search(
+        r'name\s*=\s*"OPENWEATHERMAP_API_KEY"[^}]*secret_name\s*=\s*"openweathermap-api-key"',
+        aca_contents,
+        re.DOTALL,
+    ), "missing OPENWEATHERMAP_API_KEY env secret ref"
+    assert 'name                = "openweathermap-api-key"' in aca_contents
+    assert 'trim(azurerm_key_vault.prod.vault_uri, "/")}/secrets/openweathermap-api-key' in aca_contents
+    assert re.search(r'identity\s*=\s*"System"', aca_contents)
+    assert "azurerm_key_vault_secret" not in kv_contents + aca_contents
+    for pattern in FORBIDDEN_ACA_SECRET_PATTERNS:
+        assert not re.search(pattern, aca_contents), f"forbidden ACA secret pattern: {pattern!r}"

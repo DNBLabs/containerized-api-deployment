@@ -94,7 +94,7 @@ Production resource group: `rg-cad-prod-uksouth` (Task 16).
 After apply, set the upstream weather API key manually (not in git or TF):
 
 ```bash
-az keyvault secret set --vault-name kv-cad-prod-uks --name OPENWEATHERMAP_API_KEY --value "<your-key>"
+az keyvault secret set --vault-name kv-cad-prod-uks --name openweathermap-api-key --value "<your-key>"
 ```
 
 Verify plan (requires bootstrap + `backend.hcl` + `ARM_USE_AZUREAD=true`):
@@ -129,8 +129,24 @@ Outputs: `terraform output acr_name`, `key_vault_name`, `acr_login_server`, `con
 | HSTS | `ENABLE_HSTS=true` | App emits Strict-Transport-Security behind ACA TLS |
 | Image | `container_image` var | Default MCR quickstart placeholder until CI deploy (Tasks 21–22); validated at TF boundary |
 
-Task 18 adds system-assigned MI, AcrPull, `WEATHER_PROVIDER=openweathermap`, and Key Vault secret ref.
+## Task 18: Runtime identity + secrets
+
+| Control | Setting |
+|---------|---------|
+| ACA identity | System-assigned on `ca-weather-api-prod` |
+| ACR pull | `AcrPull` role on `acrcadprod` (no admin user) |
+| Key Vault | `Key Vault Secrets User` on `kv-cad-prod-uks` |
+| Provider | `WEATHER_PROVIDER=openweathermap` |
+| Upstream API key | ACA secret ref → KV `OPENWEATHERMAP_API_KEY` (not in TF) |
+
+After apply, set the secret manually (required before `/health/ready` passes with openweathermap):
+
+```bash
+az keyvault secret set --vault-name kv-cad-prod-uks --name openweathermap-api-key --value "<your-key>"
+```
+
+RBAC propagation can take ~15s. Re-check readiness on the ACA FQDN after the secret exists.
 
 ## Next tasks
 
-- **Task 18–19:** Runtime MI + secrets, GitHub OIDC
+- **Task 19:** GitHub OIDC + CI RBAC

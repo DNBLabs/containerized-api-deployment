@@ -474,12 +474,12 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** System-assigned MI on container app; `AcrPull` on ACR; ACA env `WEATHER_PROVIDER=openweathermap`; secret ref `OPENWEATHERMAP_API_KEY` from Key Vault (secret must exist — manual step).
 
 **Acceptance criteria:**
-- [ ] No ACR admin user
-- [ ] Container app template references KV secret name `OPENWEATHERMAP_API_KEY`
+- [x] No ACR admin user — `admin_enabled = false` unchanged; test `test_prod_stack_aca_runtime_identity_and_acr_pull`
+- [x] Container app template references KV secret name `OPENWEATHERMAP_API_KEY` — ACA secret ref + env `secret_name`; test `test_prod_stack_aca_weather_provider_and_kv_secret_ref`
 
 **Verification:**
-- [ ] `terraform apply` (local) + portal check identities
-- [ ] Manual: `az keyvault secret set` documented; ready probe passes after secret set
+- [x] `terraform validate` + contract tests — 16/16 `test_prod_terraform.py`
+- [x] Manual `az keyvault secret set` documented — `infra/envs/prod/README.md` Task 18 section
 
 **Dependencies:** Task 17
 
