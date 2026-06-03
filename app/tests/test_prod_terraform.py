@@ -101,13 +101,13 @@ ACA_SECURITY_PATTERNS = (
 )
 
 FORBIDDEN_ACA_SECRET_PATTERNS = (
-    r'secret\s+\{[^}]*value\s*=',
+    r"secret\s+\{[^}]*value\s*=",
     r"password_secret_name\s*=",
     r"azurerm_key_vault_secret",
 )
 
 TASK18_ACA_IDENTITY_PATTERNS = (
-    r'identity\s+\{',
+    r"identity\s+\{",
     r'type\s*=\s*"SystemAssigned, UserAssigned"',
 )
 
@@ -133,7 +133,7 @@ KEY_VAULT_DATA_PLANE_HARDENING_PATTERNS = (
     r"enabled_for_deployment\s*=\s*false",
     r"enabled_for_template_deployment\s*=\s*false",
     r"enabled_for_disk_encryption\s*=\s*false",
-    r'network_acls\s+\{',
+    r"network_acls\s+\{",
     r'default_action\s*=\s*length\(var\.key_vault_allowed_ip_ranges\)\s*>\s*0\s*\?\s*"Deny"\s*:\s*"Allow"',
 )
 
@@ -217,7 +217,7 @@ def test_prod_stack_backend_config_template_uses_entra_id() -> None:
 
 
 def test_prod_stack_plans_prod_resource_group_name() -> None:
-    """Locals and RG resource match CONTEXT production naming (default vars → rg-cad-prod-uksouth)."""
+    """Locals and RG resource match CONTEXT naming (defaults → rg-cad-prod-uksouth)."""
     main_tf = PROD_DIR / "main.tf"
     assert main_tf.is_file()
     contents = main_tf.read_text(encoding="utf-8")
@@ -323,8 +323,8 @@ def test_prod_stack_declares_aca_environment_and_container_app() -> None:
     assert aca_tf.is_file(), "infra/envs/prod/aca.tf must exist"
     aca_contents = aca_tf.read_text(encoding="utf-8")
     main_contents = main_tf.read_text(encoding="utf-8")
-    combined = aca_contents + main_contents
-    assert 'cae_name       = "cae-${var.prefix}-${var.environment}-${var.location}"' in main_contents
+    cae_local = 'cae_name       = "cae-${var.prefix}-${var.environment}-${var.location}"'
+    assert cae_local in main_contents
     assert 'container_app_name = "ca-weather-api-${var.environment}"' in main_contents
     assert CONTEXT_CAE_NAME == "cae-cad-prod-uksouth"
     assert CONTEXT_CONTAINER_APP_NAME == "ca-weather-api-prod"
@@ -398,7 +398,8 @@ def test_prod_stack_aca_weather_provider_and_kv_secret_ref() -> None:
         re.DOTALL,
     ), "missing OPENWEATHERMAP_API_KEY env secret ref"
     assert 'name                = "openweathermap-api-key"' in aca_contents
-    assert 'trim(azurerm_key_vault.prod.vault_uri, "/")}/secrets/openweathermap-api-key' in aca_contents
+    kv_secret_ref = 'trim(azurerm_key_vault.prod.vault_uri, "/")}/secrets/openweathermap-api-key'
+    assert kv_secret_ref in aca_contents
     assert re.search(r'identity\s*=\s*"System"', aca_contents)
     assert "azurerm_key_vault_secret" not in kv_contents + aca_contents
     for pattern in FORBIDDEN_ACA_SECRET_PATTERNS:
@@ -422,7 +423,7 @@ def test_prod_stack_github_oidc_federated_credential_main_only() -> None:
         assert re.search(pattern, oidc_contents), f"missing federated credential: {pattern!r}"
     assert 'default     = "DNBLabs"' in oidc_contents
     assert 'default     = "containerized-api-deployment"' in oidc_contents
-    assert "strcontains(lower(var.github_organization), \"pull_request\")" in oidc_contents
+    assert 'strcontains(lower(var.github_organization), "pull_request")' in oidc_contents
     assert "local.github_federated_subject" in oidc_contents
 
 
@@ -461,5 +462,11 @@ def test_prod_stack_github_oidc_security_contract() -> None:
     assert ':ref:refs/heads/main"' in oidc_contents
     for pattern in TASK19_FORBIDDEN_OIDC_PATTERNS:
         assert not re.search(pattern, oidc_contents), f"forbidden GitHub OIDC pattern: {pattern!r}"
-    for key in ("ci_rbac", "ci_oidc_federation", "ci_oidc_no_static_credentials", "ci_contributor_scope_v1"):
+    security_note_keys = (
+        "ci_rbac",
+        "ci_oidc_federation",
+        "ci_oidc_no_static_credentials",
+        "ci_contributor_scope_v1",
+    )
+    for key in security_note_keys:
         assert key in notes_contents, f"missing security_notes.{key}"
