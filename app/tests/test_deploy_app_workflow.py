@@ -96,6 +96,9 @@ def test_deploy_app_workflow_tags_image_with_seven_char_sha() -> None:
 def test_deploy_app_workflow_fails_trivy_on_critical() -> None:
     """Task 21: Critical CVE blocks push."""
     contents = _deploy_workflow_text()
+    assert re.search(r"aquasecurity/trivy-action@v\d+\.\d+\.\d+", contents), (
+        "trivy-action must use a v-prefixed release tag (e.g. v0.36.0)"
+    )
     assert re.search(r"severity:\s*CRITICAL", contents)
     assert re.search(r'exit-code:\s*"1"', contents)
 
