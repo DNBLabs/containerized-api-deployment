@@ -101,6 +101,9 @@ def test_deploy_app_workflow_fails_trivy_on_critical() -> None:
     )
     assert re.search(r"severity:\s*CRITICAL", contents)
     assert re.search(r'exit-code:\s*"1"', contents)
+    assert re.search(r'ignore-unfixed:\s*"true"', contents), (
+        "ignore unfixed OS CVEs without published patches (e.g. debian perl-base)"
+    )
 
 
 def test_deploy_app_workflow_builds_from_app_context() -> None:
