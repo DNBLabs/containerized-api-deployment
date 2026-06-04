@@ -63,33 +63,33 @@ output "prefix" {
 output "security_notes" {
   description = "Security checklist for remote state and Terraform operations (no secrets in git)."
   value = {
-    remote_state_auth            = "backend.hcl: use_azuread_auth = true only — never access_key"
-    provider_storage_auth        = "storage_use_azuread = true in versions.tf"
-    backend_config_gitignored    = true
-    state_contains_secrets       = true
-    operator_rbac_on_state_store = "Storage Blob Data Contributor on bootstrap storage account (least privilege for state blob access)"
-    ci_rbac                      = "id-cad-github-prod Contributor on rg-cad-prod-uksouth; grant Storage Blob Data Contributor on state account separately for terraform init/plan/apply"
-    ci_oidc_federation           = "main ref + GitHub Environment production subjects on id-cad-github-prod (OIDC only)"
+    remote_state_auth             = "backend.hcl: use_azuread_auth = true only — never access_key"
+    provider_storage_auth         = "storage_use_azuread = true in versions.tf"
+    backend_config_gitignored     = true
+    state_contains_secrets        = true
+    operator_rbac_on_state_store  = "Storage Blob Data Contributor on bootstrap storage account (least privilege for state blob access)"
+    ci_rbac                       = "id-cad-github-prod Contributor on rg-cad-prod-uksouth; grant Storage Blob Data Contributor on state account separately for terraform init/plan/apply"
+    ci_oidc_federation            = "main ref + GitHub Environment production subjects on id-cad-github-prod (OIDC only)"
     ci_oidc_no_static_credentials = "OIDC only — no long-lived Azure credentials in TF or GitHub"
-    ci_contributor_scope_v1      = "RG Contributor accepted for v1 portfolio; tighten to custom roles in future ADR"
-    local_init_env_windows       = "ARM_USE_AZUREAD=true before terraform init -backend-config=backend.hcl"
-    acr_admin_disabled           = true
-    acr_pull_auth                = "ACA system-assigned MI + AcrPull on acrcadprod (no admin user)"
-    acr_public_endpoint          = "Basic SKU — public_network_access required for v1 CI push; private endpoint deferred"
-    key_vault_rbac               = true
-    key_vault_secrets_in_tf      = false
-    key_vault_manual_secret      = "openweathermap-api-key in KV (env OPENWEATHERMAP_API_KEY); az keyvault secret set after apply"
-    key_vault_network            = length(var.key_vault_allowed_ip_ranges) > 0 ? "Deny default + ip_rules" : "Allow default (RBAC required); set key_vault_allowed_ip_ranges to tighten"
-    key_vault_purge_protection   = "disabled for portfolio teardown; enable for long-lived prod if destroy not needed"
-    aca_scale                    = "minReplicas=1 maxReplicas=3; no custom scale rules in v1"
-    aca_probes                   = "/health/live (liveness), /health/ready (readiness) on port 8000"
-    aca_image_placeholder        = "container_image defaults to public MCR quickstart until CI deploy (Tasks 21–22)"
-    aca_ingress_https_only       = true
-    aca_secrets_in_tf            = false
-    aca_hsts                     = "ENABLE_HSTS=true on ACA template (CONTEXT prod)"
-    aca_runtime_mi               = "System-assigned on ca-weather-api-prod"
-    aca_kv_secret_ref            = "openweathermap-api-key KV ref -> env OPENWEATHERMAP_API_KEY (manual set before ready)"
-    aca_weather_provider         = "WEATHER_PROVIDER=openweathermap in prod ACA"
+    ci_contributor_scope_v1       = "RG Contributor accepted for v1 portfolio; tighten to custom roles in future ADR"
+    local_init_env_windows        = "ARM_USE_AZUREAD=true before terraform init -backend-config=backend.hcl"
+    acr_admin_disabled            = true
+    acr_pull_auth                 = "ACA system-assigned MI + AcrPull on acrcadprod (no admin user)"
+    acr_public_endpoint           = "Basic SKU — public_network_access required for v1 CI push; private endpoint deferred"
+    key_vault_rbac                = true
+    key_vault_secrets_in_tf       = false
+    key_vault_manual_secret       = "openweathermap-api-key in KV (env OPENWEATHERMAP_API_KEY); az keyvault secret set after apply"
+    key_vault_network             = length(var.key_vault_allowed_ip_ranges) > 0 ? "Deny default + ip_rules" : "Allow default (RBAC required); set key_vault_allowed_ip_ranges to tighten"
+    key_vault_purge_protection    = "disabled for portfolio teardown; enable for long-lived prod if destroy not needed"
+    aca_scale                     = "minReplicas=1 maxReplicas=3; no custom scale rules in v1"
+    aca_probes                    = "/health/live (liveness), /health/ready (readiness) on port 8000"
+    aca_image_placeholder         = "container_image defaults to public MCR quickstart until CI deploy (Tasks 21–22)"
+    aca_ingress_https_only        = true
+    aca_secrets_in_tf             = false
+    aca_hsts                      = "ENABLE_HSTS=true on ACA template (CONTEXT prod)"
+    aca_runtime_mi                = "System-assigned on ca-weather-api-prod"
+    aca_kv_secret_ref             = "openweathermap-api-key KV ref -> env OPENWEATHERMAP_API_KEY (manual set before ready)"
+    aca_weather_provider          = "WEATHER_PROVIDER=openweathermap in prod ACA"
   }
 }
 
