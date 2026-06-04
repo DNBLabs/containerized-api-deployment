@@ -581,12 +581,12 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 **Acceptance criteria:**
 - [x] Workflow contract: ACA update after push + `/health/live` smoke (`deploy-app.yml` + contract tests)
-- [ ] Live FQDN serves new revision after `main` merge *(requires live deploy run)*
-- [ ] `GET /weather` returns real OWM data when secret present *(manual verification)*
+- [x] Live FQDN serves new revision after `main` merge
+- [x] `GET /weather` returns real OWM data when secret present
 
 **Verification:**
-- [ ] `curl` production `/weather?city=London`
-- [ ] `/docs` loads
+- [x] `curl` production `/weather?city=London`
+- [x] `/docs` loads
 
 **Dependencies:** Task 21
 
@@ -598,16 +598,18 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ---
 
+**Task Lock [23] (2025-06-04):** Added `.github/workflows/infra.yml` — `paths: infra/**` on PR/push to `main`; `terraform fmt -check`, `validate`, `plan` + plan in **job summary** (`GITHUB_STEP_SUMMARY`); **`apply` only on `push` to `main`**; `infra/envs/prod/`, `ARM_USE_AZUREAD`, OIDC via **`production`**; concurrency **`infra-prod`** / no cancel. Contract tests in `app/tests/test_infra_workflow.py`.
+
 ## Task 23: CI workflow — Terraform path-filtered
 
 **Description:** On PR touching `infra/**`: fmt, validate, plan. On `main` + `infra/**` changes: OIDC + apply.
 
 **Acceptance criteria:**
-- [ ] PR with only `app/` changes does not run `terraform apply`
-- [ ] PR with `infra/` changes shows plan output
+- [x] PR with only `app/` changes does not run `terraform apply` — workflow does not trigger without `infra/**` path match (contract test)
+- [x] PR with `infra/` changes shows plan output — `Publish plan to job summary` step (`test_infra_workflow_publishes_plan_to_job_summary`)
 
 **Verification:**
-- [ ] Test PRs: app-only vs infra touch
+- [ ] Test PRs: app-only vs infra touch — operator: open app-only PR (no Infrastructure workflow) vs infra PR (plan in summary)
 
 **Dependencies:** Checkpoint C, Task 19
 

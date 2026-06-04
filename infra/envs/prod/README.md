@@ -1,5 +1,7 @@
 # Production Terraform stack (`infra/envs/prod`)
 
+<!-- Task 23: path-filter verification touch (infra/**) -->
+
 Main infrastructure for the tracer API in Azure. Uses **remote state** in the storage account created by [`infra/bootstrap`](../../bootstrap/README.md) (ADR 0001).
 
 ## Security (v1)
