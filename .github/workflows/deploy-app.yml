@@ -1,6 +1,4 @@
-# Build, scan, and push weather-api image to ACR (Phase Lock [4] / Task 21).
-# ACA deploy added in Task 22. Privileged jobs run only after push CI on this repo.
-
+# Build, scan, push, and deploy weather-api to ACA (Phase Lock [4] / Tasks 21–22).
 name: Deploy app
 
 on:
@@ -100,3 +98,29 @@ jobs:
 
       - name: Push image to ACR
         run: docker push "acrcadprod.azurecr.io/weather-api:${IMAGE_TAG}"
+
+      # Source: https://learn.microsoft.com/en-us/cli/azure/containerapp?view=azure-cli-latest#az-containerapp-update
+      - name: Update ACA revision
+        run: |
+          az containerapp update \
+            --name ca-weather-api-prod \
+            --resource-group rg-cad-prod-uksouth \
+            --container-name weather-api \
+            --image "acrcadprod.azurecr.io/weather-api:${IMAGE_TAG}"
+
+      - name: Smoke test /health/live
+        run: |
+          FQDN="$(az containerapp show \
+            --name ca-weather-api-prod \
+            --resource-group rg-cad-prod-uksouth \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)"
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS "https://${FQDN}/health/live"; then
+              exit 0
+            fi
+            echo "Health check attempt ${attempt} failed; retrying in 15s..."
+            sleep 15
+          done
+          echo "ACA /health/live did not return success after 5 attempts" >&2
+          exit 1
