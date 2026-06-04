@@ -556,17 +556,18 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 **Acceptance criteria:**
 - [x] Workflow contract: OIDC, 7-char SHA tag, Trivy Critical gate, ACR push (`deploy-app.yml` + contract tests)
-- [ ] Image in ACR with 7-char SHA tag only *(requires merge to `main` + green deploy)*
-- [ ] Critical CVE fails pipeline *(requires live Trivy run)*
+- [x] Image in ACR with 7-char SHA tag only — `acrcadprod.azurecr.io/weather-api:54a1fe9` (Deploy app run [#26970881675](https://github.com/DNBLabs/containerized-api-deployment/actions/runs/26970881675))
+- [x] Critical CVE fails pipeline — verified live (perl-base CRITICAL blocked before `ignore-unfixed`; fixable Critical still fail)
 
 **Verification:**
-- [ ] Merge to `main`; verify ACR tag
+- [x] Merge to `main`; verify ACR tag — `az acr repository show-tags` shows `54a1fe9` (2025-06-04)
 
 **Dependencies:** Checkpoint C, Task 12, Task 19
 
 **Files likely touched:**
 - `.github/workflows/deploy-app.yml`
 - `app/tests/test_deploy_app_workflow.py`
+- `infra/envs/prod/github_oidc.tf` *(production environment OIDC subject)*
 
 **Estimated scope:** Medium
 
