@@ -214,3 +214,4 @@ All gates below must pass on pull requests to `main` before merge (branch protec
 - **Bandit in CI (2025-06-04, Phase Lock [4]):** **Required** (fixes deferred drift in resolved decisions).
 - **GitHub OIDC repo subject (2025-06-04, Phase Lock [4]):** Confirmed **`DNBLabs/containerized-api-deployment`**.
 - **Deploy workflow security (2025-06-04, Task Lock [21]):** **`workflow_run`** gated to **`push`** CI on **same repo** only; job-scoped OIDC; hardened checkout; hex tag validation; Trivy before push.
+- **ACA deploy smoke retry (2025-06-04, Task Lock [22]):** **`/health/live`** curl with **5 attempts / 15s** after `az containerapp update`; **`--container-name weather-api`** explicit.

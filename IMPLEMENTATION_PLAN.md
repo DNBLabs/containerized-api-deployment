@@ -573,13 +573,16 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ---
 
+**Task Lock [22] (2025-06-04):** ACA deploy in same `build-push-scan` job after ACR push — `az containerapp update` with `--container-name weather-api` on `ca-weather-api-prod` / `rg-cad-prod-uksouth` ([MS CLI ref](https://learn.microsoft.com/en-us/cli/azure/containerapp?view=azure-cli-latest#az-containerapp-update)). Post-deploy smoke: `curl -fsS` `https://<fqdn>/health/live` only; FQDN from `az containerapp show`; 5× retry / 15s for revision propagation. Manual `/weather` + `/docs` remain Task 22 verification.
+
 ## Task 22: CI workflow — deploy ACA revision
 
 **Description:** After push, update `ca-weather-api-prod` to new image tag via Azure CLI or ARM/az action; rolling revision.
 
 **Acceptance criteria:**
-- [ ] Live FQDN serves new revision after `main` merge
-- [ ] `GET /weather` returns real OWM data when secret present
+- [x] Workflow contract: ACA update after push + `/health/live` smoke (`deploy-app.yml` + contract tests)
+- [ ] Live FQDN serves new revision after `main` merge *(requires live deploy run)*
+- [ ] `GET /weather` returns real OWM data when secret present *(manual verification)*
 
 **Verification:**
 - [ ] `curl` production `/weather?city=London`
@@ -589,6 +592,7 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 **Files likely touched:**
 - `.github/workflows/deploy-app.yml`
+- `app/tests/test_deploy_app_workflow.py`
 
 **Estimated scope:** Small
 

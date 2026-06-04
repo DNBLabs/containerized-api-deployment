@@ -1,6 +1,6 @@
-"""GitHub Actions deploy-app workflow contract tests (Task 21 / Phase Lock [4]).
+"""GitHub Actions deploy-app workflow contract tests (Tasks 21–22 / Phase Lock [4]).
 
-Public interface: `.github/workflows/deploy-app.yml` build, scan, and ACR push contract.
+Public interface: `.github/workflows/deploy-app.yml` build, scan, push, and ACA deploy contract.
 """
 
 from __future__ import annotations
@@ -119,3 +119,27 @@ def test_deploy_app_workflow_uses_production_environment_and_oidc() -> None:
     assert "azure/login@v2" in contents
     assert "secrets.AZURE_CLIENT_ID" in contents
     assert "id-token: write" in contents
+
+
+def test_deploy_app_workflow_updates_aca_revision_after_acr_push() -> None:
+    """Task 22: roll ca-weather-api-prod to new image after ACR push (Phase Lock [4])."""
+    contents = _deploy_workflow_text()
+    push_index = contents.index("Push image to ACR")
+    update_index = contents.index("Update ACA revision")
+    assert push_index < update_index
+    assert "az containerapp update" in contents
+    assert "--name ca-weather-api-prod" in contents
+    assert "--resource-group rg-cad-prod-uksouth" in contents
+    assert "--container-name weather-api" in contents
+    assert '--image "acrcadprod.azurecr.io/weather-api:${IMAGE_TAG}"' in contents
+
+
+def test_deploy_app_workflow_smokes_health_live_after_aca_update() -> None:
+    """Task Lock [22]: post-deploy smoke uses ingress FQDN and /health/live only."""
+    contents = _deploy_workflow_text()
+    update_index = contents.index("Update ACA revision")
+    smoke_index = contents.index("Smoke test /health/live")
+    assert update_index < smoke_index
+    assert "az containerapp show" in contents
+    assert "properties.configuration.ingress.fqdn" in contents
+    assert 'curl -fsS "https://${FQDN}/health/live"' in contents
