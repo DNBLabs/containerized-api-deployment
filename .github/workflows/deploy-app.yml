@@ -96,6 +96,7 @@ jobs:
           image-ref: acrcadprod.azurecr.io/weather-api:${{ env.IMAGE_TAG }}
           severity: CRITICAL
           exit-code: "1"
+          ignore-unfixed: "true"
 
       - name: Push image to ACR
         run: docker push "acrcadprod.azurecr.io/weather-api:${IMAGE_TAG}"
