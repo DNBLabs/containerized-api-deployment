@@ -229,8 +229,14 @@ def test_prod_stack_core_resource_locals_match_context() -> None:
     """Naming locals resolve to CONTEXT defaults: acrcadprod, kv-cad-prod-uks."""
     main_tf = PROD_DIR / "main.tf"
     contents = main_tf.read_text(encoding="utf-8")
-    assert 'acr_name       = "acr${var.prefix}${var.environment}"' in contents
-    assert 'key_vault_name = "kv-${var.prefix}-${var.environment}-uks"' in contents
+    assert re.search(
+        r'acr_name\s+=\s+"acr\$\{var\.prefix\}\$\{var\.environment\}"',
+        contents,
+    )
+    assert re.search(
+        r'key_vault_name\s+=\s+"kv-\$\{var\.prefix\}-\$\{var\.environment\}-uks"',
+        contents,
+    )
     assert CONTEXT_ACR_NAME == "acrcadprod"
     assert CONTEXT_KEY_VAULT_NAME == "kv-cad-prod-uks"
 
@@ -323,9 +329,14 @@ def test_prod_stack_declares_aca_environment_and_container_app() -> None:
     assert aca_tf.is_file(), "infra/envs/prod/aca.tf must exist"
     aca_contents = aca_tf.read_text(encoding="utf-8")
     main_contents = main_tf.read_text(encoding="utf-8")
-    cae_local = 'cae_name       = "cae-${var.prefix}-${var.environment}-${var.location}"'
-    assert cae_local in main_contents
-    assert 'container_app_name = "ca-weather-api-${var.environment}"' in main_contents
+    assert re.search(
+        r'cae_name\s+=\s+"cae-\$\{var\.prefix\}-\$\{var\.environment\}-\$\{var\.location\}"',
+        main_contents,
+    )
+    assert re.search(
+        r'container_app_name\s+=\s+"ca-weather-api-\$\{var\.environment\}"',
+        main_contents,
+    )
     assert CONTEXT_CAE_NAME == "cae-cad-prod-uksouth"
     assert CONTEXT_CONTAINER_APP_NAME == "ca-weather-api-prod"
     assert "local.cae_name" in aca_contents
