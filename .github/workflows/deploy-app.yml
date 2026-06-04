@@ -1,0 +1,101 @@
+# Build, scan, and push weather-api image to ACR (Phase Lock [4] / Task 21).
+# ACA deploy added in Task 22. Privileged jobs run only after push CI on this repo.
+
+name: Deploy app
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    name: Check deploy needed
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      deploy: ${{ steps.filter.outputs.deploy }}
+    steps:
+      - name: Checkout merged commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Detect app changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            deploy:
+              - 'app/**'
+              - 'compose.yml'
+              - '.github/workflows/deploy-app.yml'
+
+  build-push-scan:
+    name: Build, scan, and push
+    needs: gate
+    if: needs.gate.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout merged commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set and validate image tag
+        run: |
+          IMAGE_TAG="${HEAD_SHA:0:7}"
+          if ! [[ "$IMAGE_TAG" =~ ^[0-9a-f]{7}$ ]]; then
+            echo "Invalid image tag derived from head SHA: $IMAGE_TAG" >&2
+            exit 1
+          fi
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to ACR
+        run: az acr login --name acrcadprod
+
+      - name: Build container image
+        run: |
+          docker build \
+            -t "acrcadprod.azurecr.io/weather-api:${IMAGE_TAG}" \
+            ./app
+
+      - name: Scan image for Critical vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: acrcadprod.azurecr.io/weather-api:${{ env.IMAGE_TAG }}
+          severity: CRITICAL
+          exit-code: "1"
+
+      - name: Push image to ACR
+        run: docker push "acrcadprod.azurecr.io/weather-api:${IMAGE_TAG}"
