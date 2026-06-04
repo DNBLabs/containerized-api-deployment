@@ -659,10 +659,33 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ### Checkpoint E: v1 complete
 
-- [ ] All PRD user stories satisfied or explicitly deferred in CONTEXT
-- [ ] Issue #1 acceptance: reviewer can clone, run Compose, see green CI, hit prod URL
-- [ ] `CONTEXT.md` unchanged terms; update only if implementation revealed glossary gaps
-- [ ] Ready for human review / portfolio publish
+**Checkpoint E verified (2025-06-04):** PRD stories 1–45 mapped below; Issue #1 reviewer path evidenced; `CONTEXT.md` glossary unchanged; merge PR [#8](https://github.com/DNBLabs/containerized-api-deployment/pull/8) (Tasks 23–24 + README) to align `main` with workspace for publish.
+
+- [x] All PRD user stories satisfied or explicitly deferred in CONTEXT — see traceability table; PRD “Out of scope” items match CONTEXT v1 bar / resolved decisions (staging, APM, auto-rollback, scale rules, runbook, etc.)
+- [x] Issue #1 acceptance: reviewer can clone, run Compose, see green CI, hit prod URL — README quickstart; CI [#26971457103](https://github.com/DNBLabs/containerized-api-deployment/actions/runs/26971457103) success on `main`; live host 200 on `/health/live`, `/docs`, `/weather`; `94` pytest pass locally
+- [x] `CONTEXT.md` unchanged terms; update only if implementation revealed glossary gaps — no glossary edits this checkpoint (bandit/infra CI already in CONTEXT Phase Lock [4])
+- [x] Ready for human review / portfolio publish — after PR #8 merge: full README, three workflows, ruleset **Main** requires **App quality gates**
+
+#### PRD user story traceability (v1)
+
+| IDs | Status | Evidence |
+|-----|--------|----------|
+| 1–2 | Done | Live FQDN; `/weather`, `/docs` HTTPS 200 (2025-06-04) |
+| 3, 44–45 | Done | Root `README.md` Mermaid + Day-0/1; links ADR 0001, CONTEXT, PRD |
+| 4 | Done | `ci.yml`, `deploy-app.yml`, `infra.yml`; Trivy + Terraform plan in Actions |
+| 5 | Done | `acrcadprod.azurecr.io/weather-api:<7-char-sha>`; deploy uses `head_sha` |
+| 6–7 | Done | Monorepo `app/` + `infra/` + workflows; whitepaper + CONTEXT committed |
+| 8–11 | Done | `compose.yml` mock default; `app/README.md`, `.env.example` |
+| 12–19 | Done | `test_weather_api.py`, location/OWM/error tests; public API |
+| 20–22 | Done | `test_health.py`, `test_logging.py`, ACA probes in `aca.tf` |
+| 23–24 | Done | `min_replicas=1`, `max_replicas=3`; scale **rules** deferred (CONTEXT v1.1) |
+| 25, 39 | Done | README rollback + teardown + cost |
+| 26–32 | Done | KV + ACA secret ref; manual KV set; OIDC UAMI; Trivy; non-root Dockerfile |
+| 33–38 | Done | `infra/bootstrap`, `infra/envs/prod`, remote backend, `infra.yml` path-filter |
+| 40–41, 43 | Done | CI gates; `workflow_run` deploy chain (Checkpoint D) |
+| 42 | Done | Ruleset **Main** active: required check **App quality gates** (PR approval optional v1.1) |
+
+**PRD out of scope (explicit in CONTEXT):** Azure staging, caller auth, custom domain, App Insights, automated rollback, HTTP scale rules, bootstrap-from-CI, OWM on ready probe, separate runbook, split OIDC identities, subscription-wide CI RBAC.
 
 ---
 
