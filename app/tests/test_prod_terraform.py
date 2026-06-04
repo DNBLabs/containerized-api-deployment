@@ -427,6 +427,18 @@ def test_prod_stack_github_oidc_federated_credential_main_only() -> None:
     assert "local.github_federated_subject" in oidc_contents
 
 
+def test_prod_stack_github_oidc_federated_credential_production_environment() -> None:
+    """Task 21: GitHub Environment production OIDC subject for deploy/infra workflows."""
+    github_oidc_tf = PROD_DIR / "github_oidc.tf"
+    oidc_contents = github_oidc_tf.read_text(encoding="utf-8")
+    assert re.search(
+        r'resource\s+"azurerm_federated_identity_credential"\s+"github_production"',
+        oidc_contents,
+    )
+    assert "local.github_federated_subject_production" in oidc_contents
+    assert ':environment:production"' in oidc_contents
+
+
 def test_prod_stack_github_ci_rg_contributor_rbac() -> None:
     """Task 19: CI identity Contributor on prod resource group only (not subscription-wide)."""
     github_oidc_tf = PROD_DIR / "github_oidc.tf"
@@ -457,9 +469,10 @@ def test_prod_stack_github_oidc_security_contract() -> None:
     outputs_tf = PROD_DIR / "outputs.tf"
     oidc_contents = github_oidc_tf.read_text(encoding="utf-8")
     notes_contents = outputs_tf.read_text(encoding="utf-8")
-    assert oidc_contents.count('resource "azurerm_federated_identity_credential"') == 1
+    assert oidc_contents.count('resource "azurerm_federated_identity_credential"') == 2
     assert "local.github_federated_subject" in oidc_contents
     assert ':ref:refs/heads/main"' in oidc_contents
+    assert ':environment:production"' in oidc_contents
     for pattern in TASK19_FORBIDDEN_OIDC_PATTERNS:
         assert not re.search(pattern, oidc_contents), f"forbidden GitHub OIDC pattern: {pattern!r}"
     security_note_keys = (

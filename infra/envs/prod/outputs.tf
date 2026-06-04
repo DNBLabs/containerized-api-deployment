@@ -69,7 +69,7 @@ output "security_notes" {
     state_contains_secrets       = true
     operator_rbac_on_state_store = "Storage Blob Data Contributor on bootstrap storage account (least privilege for state blob access)"
     ci_rbac                      = "id-cad-github-prod Contributor on rg-cad-prod-uksouth; grant Storage Blob Data Contributor on state account separately for terraform init/plan/apply"
-    ci_oidc_federation           = "repo:DNBLabs/containerized-api-deployment:ref:refs/heads/main only (no client secrets in TF or GitHub)"
+    ci_oidc_federation           = "main ref + GitHub Environment production subjects on id-cad-github-prod (OIDC only)"
     ci_oidc_no_static_credentials = "OIDC only — no long-lived Azure credentials in TF or GitHub"
     ci_contributor_scope_v1      = "RG Contributor accepted for v1 portfolio; tighten to custom roles in future ADR"
     local_init_env_windows       = "ARM_USE_AZUREAD=true before terraform init -backend-config=backend.hcl"

@@ -34,7 +34,8 @@ variable "github_repository" {
 }
 
 locals {
-  github_federated_subject = "repo:${var.github_organization}/${var.github_repository}:ref:refs/heads/main"
+  github_federated_subject            = "repo:${var.github_organization}/${var.github_repository}:ref:refs/heads/main"
+  github_federated_subject_production = "repo:${var.github_organization}/${var.github_repository}:environment:production"
 }
 
 resource "azurerm_user_assigned_identity" "github_ci" {
@@ -51,6 +52,15 @@ resource "azurerm_federated_identity_credential" "github_main" {
   audience            = ["api://AzureADTokenExchange"]
   issuer              = "https://token.actions.githubusercontent.com"
   subject             = local.github_federated_subject
+}
+
+resource "azurerm_federated_identity_credential" "github_production" {
+  name                = "fc-cad-github-production-env"
+  resource_group_name = azurerm_resource_group.prod.name
+  parent_id           = azurerm_user_assigned_identity.github_ci.id
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = "https://token.actions.githubusercontent.com"
+  subject             = local.github_federated_subject_production
 }
 
 resource "azurerm_role_assignment" "github_ci_rg_contributor" {
