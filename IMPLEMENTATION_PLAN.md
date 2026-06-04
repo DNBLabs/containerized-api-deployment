@@ -548,13 +548,16 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ---
 
+**Task Lock [21] (2025-06-04):** Security hardening on `deploy-app.yml` — deploy only when triggering CI event is **`push`** (not PR) and **`head_repository` matches this repo**; job-level **`id-token: write`** only on `build-push-scan`; checkout **`fetch-depth: 1`** + **`persist-credentials: false`**; validate **7-char hex** `IMAGE_TAG`; Trivy **before** push; Azure creds via **`production` environment secrets** only. Accepted v1 risk: UAMI **Contributor** on prod RG.
+
 ## Task 21: CI workflow — build, Trivy, push ACR
 
 **Description:** On `main`, OIDC login, build image, tag `:${{ github.sha }}` shortened to 7 chars, push to `acrcadprod`, Trivy fail on Critical.
 
 **Acceptance criteria:**
-- [ ] Image in ACR with 7-char SHA tag only
-- [ ] Critical CVE fails pipeline
+- [x] Workflow contract: OIDC, 7-char SHA tag, Trivy Critical gate, ACR push (`deploy-app.yml` + contract tests)
+- [ ] Image in ACR with 7-char SHA tag only *(requires merge to `main` + green deploy)*
+- [ ] Critical CVE fails pipeline *(requires live Trivy run)*
 
 **Verification:**
 - [ ] Merge to `main`; verify ACR tag
@@ -562,7 +565,8 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Dependencies:** Checkpoint C, Task 12, Task 19
 
 **Files likely touched:**
-- `.github/workflows/deploy-app.yml` (or combined workflow)
+- `.github/workflows/deploy-app.yml`
+- `app/tests/test_deploy_app_workflow.py`
 
 **Estimated scope:** Medium
 
