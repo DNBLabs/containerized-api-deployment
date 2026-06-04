@@ -536,7 +536,7 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 - [x] Fails on test/lint/type errors
 
 **Verification:**
-- [ ] Open PR; checks appear on GitHub *(requires push to remote)*
+- [x] Open PR; checks appear on GitHub — PR [#2](https://github.com/DNBLabs/containerized-api-deployment/pull/2); **App quality gates** passed
 
 **Dependencies:** Checkpoint A
 
