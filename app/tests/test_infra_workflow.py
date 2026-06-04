@@ -58,6 +58,14 @@ def test_infra_workflow_runs_fmt_validate_and_plan() -> None:
     assert plan_index < apply_index
 
 
+def test_infra_workflow_uses_terraform_oidc_not_azure_cli() -> None:
+    """azurerm on GHA must use OIDC env vars, not Azure CLI service principal auth."""
+    contents = _infra_workflow_text()
+    assert re.search(r'ARM_USE_OIDC:\s*"?true"?', contents)
+    assert "ARM_CLIENT_ID" in contents
+    assert "secrets.AZURE_CLIENT_ID" in contents
+
+
 def test_infra_workflow_uses_prod_stack_and_entra_backend_auth() -> None:
     """Phase Lock [4]: prod working dir and ARM_USE_AZUREAD for remote state."""
     contents = _infra_workflow_text()
