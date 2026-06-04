@@ -659,12 +659,12 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ### Checkpoint E: v1 complete
 
-**Checkpoint E verified (2025-06-04):** PRD stories 1–45 mapped below; Issue #1 reviewer path evidenced; `CONTEXT.md` glossary unchanged; merge PR [#8](https://github.com/DNBLabs/containerized-api-deployment/pull/8) (Tasks 23–24 + README) to align `main` with workspace for publish.
+**Checkpoint E verified (2025-06-04):** PRD stories 1–45 mapped below; Issue #1 reviewer path evidenced; `CONTEXT.md` glossary unchanged; merged [#8](https://github.com/DNBLabs/containerized-api-deployment/pull/8) → `main` @ `61fa8bd` (Tasks 23–24 + README).
 
 - [x] All PRD user stories satisfied or explicitly deferred in CONTEXT — see traceability table; PRD “Out of scope” items match CONTEXT v1 bar / resolved decisions (staging, APM, auto-rollback, scale rules, runbook, etc.)
 - [x] Issue #1 acceptance: reviewer can clone, run Compose, see green CI, hit prod URL — README quickstart; CI [#26971457103](https://github.com/DNBLabs/containerized-api-deployment/actions/runs/26971457103) success on `main`; live host 200 on `/health/live`, `/docs`, `/weather`; `94` pytest pass locally
 - [x] `CONTEXT.md` unchanged terms; update only if implementation revealed glossary gaps — no glossary edits this checkpoint (bandit/infra CI already in CONTEXT Phase Lock [4])
-- [x] Ready for human review / portfolio publish — after PR #8 merge: full README, three workflows, ruleset **Main** requires **App quality gates**
+- [x] Ready for human review / portfolio publish — `main` has full README, three workflows (`ci`, `deploy-app`, `infra`); ruleset **Main** requires **App quality gates**
 
 #### PRD user story traceability (v1)
 
