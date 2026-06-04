@@ -513,14 +513,16 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ### Checkpoint C: Azure infrastructure
 
-- [ ] Bootstrap applied; main stack applied
-- [ ] `az keyvault secret set` for `OPENWEATHERMAP_API_KEY` completed
-- [ ] ACA FQDN exists (app image may be placeholder until Phase 4)
-- [ ] **Human:** confirm subscription cost acceptable
+- [x] Bootstrap applied; main stack applied
+- [x] `az keyvault secret set` for `OPENWEATHERMAP_API_KEY` completed
+- [x] ACA FQDN exists (app image may be placeholder until Phase 4)
+- [x] **Human:** confirm subscription cost acceptable
 
 ---
 
 ### Phase 4: CI/CD
+
+**Phase Lock [4] (2025-06-04):** Decisions locked in `CONTEXT.md` — three workflows (`ci.yml`, `deploy-app.yml`, `infra.yml`); `ci.yml` on PR + push to `main` (pytest, ruff, mypy, bandit); `deploy-app.yml` via `workflow_run` after CI success, paths-filter for app changes, checkout `head_sha`, GitHub Environment `production` for Azure OIDC, build context `app/`, tag `acrcadprod.azurecr.io/weather-api:<7-char-sha>`, Trivy fail Critical, `az containerapp update`, smoke `/health/live` with FQDN from `az containerapp show`, concurrency `deploy-prod` cancel-in-progress; `infra.yml` path `infra/**`, PR plan to job summary, main apply, `infra-prod` no cancel; branch protection requires `App quality gates` only; OIDC subject confirmed `DNBLabs/containerized-api-deployment`.
 
 ---
 
@@ -529,7 +531,8 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 **Description:** `.github/workflows/ci.yml`: on PR and push to `main`, run from `app/` with `WEATHER_PROVIDER=mock`.
 
 **Acceptance criteria:**
-- [x] Workflow runs pytest, ruff check, ruff format --check, mypy
+- [x] Workflow runs pytest, ruff check, ruff format --check, mypy, bandit
+- [x] Triggers on `pull_request` and `push` to `main` (Phase Lock [4])
 - [x] Fails on test/lint/type errors
 
 **Verification:**
@@ -539,6 +542,7 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 **Files likely touched:**
 - `.github/workflows/ci.yml`
+- `app/tests/test_ci_workflow.py`
 
 **Estimated scope:** Small
 
@@ -607,9 +611,10 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ### Checkpoint D: Pipeline end-to-end
 
-- [ ] Branch protection on `main` enabled (required checks)
-- [ ] Green run: test → build → scan → push → deploy
-- [ ] Live HTTPS weather + docs
+- [ ] Branch protection on `main` enabled (required check: **`App quality gates`** / workflow **`CI`**)
+- [ ] GitHub Environment **`production`** configured with Azure OIDC vars
+- [ ] Green run: test → build → scan → push → deploy (deploy via `workflow_run` + paths-filter)
+- [ ] Live HTTPS `/health/live` smoke in deploy workflow; manual `/weather` + `/docs`
 
 ---
 
@@ -661,7 +666,7 @@ Build a **reference implementation + production-grade** monorepo: FastAPI **trac
 
 ## Open Questions
 
-- [ ] **GitHub org/repo subject:** Confirm `DNBLabs/containerized-api-deployment` matches actual federated credential (if repo renamed, update TF vars).
+- [x] **GitHub org/repo subject:** Confirmed **`DNBLabs/containerized-api-deployment`** (Phase Lock [4]).
 - [x] **Contributor vs custom roles:** RG **Contributor** for v1 on `rg-cad-prod-uksouth` (Task 19); tighten in future ADR if needed.
 - [x] **Dockerfile location:** **`app/Dockerfile`** + root **`compose.yml`** with `build.context: ./app` — Phase Lock [2], Option A.
 

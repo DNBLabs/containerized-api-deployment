@@ -68,6 +68,23 @@ All gates below must pass on pull requests to `main` before merge (branch protec
 | Container image scan (Trivy; fail on Critical) | Required |
 | Terraform (`fmt`, `validate`; `plan` when PR touches `infra/**`) | Required (path-filtered plan) |
 
+## CI/CD workflows (v1)
+
+| Term | Definition |
+|------|------------|
+| **Workflow topology** | Three files: **`ci.yml`** (app quality), **`deploy-app.yml`** (build → Trivy → ACR → ACA), **`infra.yml`** (Terraform path-filtered). |
+| **Application CI workflow (`ci.yml`)** | Triggers: **`pull_request` → `main`** and **`push` → `main`**. Working dir **`app/`**; **`WEATHER_PROVIDER=mock`**. Gates: pytest, ruff check/format, mypy, bandit (`src/weather_api`). Permissions: **`contents: read`** only (no OIDC). Job name **`App quality gates`**. |
+| **Deploy workflow (`deploy-app.yml`)** | Sole trigger: **`workflow_run`** after workflow **`CI`** completes with **`conclusion == success`** on **`main`**. Checkout **`github.event.workflow_run.head_sha`**. First job: **paths-filter** — skip unless **`app/**`**, **`app/Dockerfile`**, **`compose.yml`**, or **`.github/workflows/deploy-app.yml`** changed. **`environment: production`**. OIDC via **`azure/login`**; permissions **`id-token: write`**, **`contents: read`**. |
+| **Infrastructure CI workflow (`infra.yml`)** | Path filter **`infra/**`** on **`pull_request` → `main`** and **`push` → `main`**. PR: **`terraform fmt -check`**, **`validate`**, **`plan`** (output in **job summary**). **`main`**: same + **`apply -auto-approve`**. Working dir **`infra/envs/prod/`**; **`ARM_USE_AZUREAD=true`**. **`environment: production`**. Infra plan **not** a branch-protection required check in v1 (README/manual review). |
+| **GitHub Environment (`production`)** | Holds **`AZURE_CLIENT_ID`**, **`AZURE_TENANT_ID`**, **`AZURE_SUBSCRIPTION_ID`** (environment secrets or vars). Used only by **`deploy-app.yml`** and **`infra.yml`**. Deployment branch restriction: **`main`**. No required approvers in v1. |
+| **Container image CI build** | **`docker build`** with context **`app/`** (Phase Lock [2]); tag **`acrcadprod.azurecr.io/weather-api:<7-char-sha>`** — first **7** hex chars of commit SHA (from **`head_sha`** on deploy). Push to **`acrcadprod`**; no **`latest`**. |
+| **Container image scan (Trivy)** | Scan **built image** in deploy workflow; **fail on CRITICAL** only. No **`.trivyignore`** unless a documented false positive blocks deploy. |
+| **ACA deploy (CI)** | **`az containerapp update`** on **`ca-weather-api-prod`** in **`rg-cad-prod-uksouth`** with new image ref. Terraform does **not** update image tag on routine app deploys. |
+| **Post-deploy smoke (CI)** | After ACA update: **`curl -fsS`** **`https://<fqdn>/health/live`** where **`<fqdn>`** from **`az containerapp show`**. Fail job on non-2xx. Manual **`/weather`** verification remains Checkpoint D. |
+| **Deploy concurrency** | Group **`deploy-prod`**, **`cancel-in-progress: true`**. Infra group **`infra-prod`**, **`cancel-in-progress: false`**. |
+| **Branch protection (v1)** | **`main`**: required status check **`App quality gates`** (workflow **`CI`**). Infra plan visibility via Actions summary; not a required check. |
+| **GitHub OIDC subject (confirmed)** | **`repo:DNBLabs/containerized-api-deployment:ref:refs/heads/main`** — matches Terraform **`github_oidc.tf`** defaults. |
+
 ## Runtime stack
 
 | Term | Definition |
@@ -143,7 +160,7 @@ All gates below must pass on pull requests to `main` before merge (branch protec
 - **Terraform in CI (2025-06-01):** **Path-filtered apply** — plan on PRs affecting `infra/`; apply on `main` only when `infra/**` changes; app deploy every `main` merge.
 - **ACA scaling (2025-06-01):** **`minReplicas = 1`** in production (always warm).
 - **Health endpoints (2025-06-01):** **`/health/live`** + **`/health/ready`** (config check only; no upstream ping on ready).
-- **CI quality gates (2025-06-01):** **pytest, ruff, mypy, Trivy (Critical), Terraform fmt/validate/plan** (path-filtered); bandit deferred.
+- **CI quality gates (2025-06-01):** **pytest, ruff, mypy, bandit, Trivy (Critical), Terraform fmt/validate/plan** (path-filtered).
 - **Python version (2025-06-01):** **3.12**.
 - **Azure naming (2025-06-01):** Prefix **`cad`** with prod/`uksouth` segments (see resource name table in glossary).
 - **Key Vault secret bootstrap (2025-06-01):** **Manual one-shot** after infra apply; README-documented.
@@ -182,3 +199,17 @@ All gates below must pass on pull requests to `main` before merge (branch protec
 - **Container builder image (2025-06-02, Phase Lock [2]):** **`ghcr.io/astral-sh/uv:python3.12-bookworm-slim`** builder; **`python:3.12-slim`** runtime; pin builder tag (not `:latest`).
 - **Dockerfile COPY layering (2025-06-02, Phase Lock [2]):** Lockfiles first → **`uv sync --no-install-project`**; then **`src/`** → full sync; runtime copies **`.venv` + `src/`** only.
 - **Compose restart policy (2025-06-02, Phase Lock [2]):** **`restart: unless-stopped`** on **`weather-api`** service.
+- **CI workflow topology (2025-06-04, Phase Lock [4]):** **Three workflows** — **`ci.yml`**, **`deploy-app.yml`**, **`infra.yml`** — Option A.
+- **Application CI triggers (2025-06-04, Phase Lock [4]):** **`pull_request` → `main`** + **`push` → `main`** on **`ci.yml`**.
+- **Deploy workflow trigger (2025-06-04, Phase Lock [4]):** **`workflow_run`** after **`CI`** success on **`main`** only; paths-filter skip for non-app changes; checkout **`head_sha`**.
+- **Deploy path filter (2025-06-04, Phase Lock [4]):** Deploy when **`app/**`**, **`app/Dockerfile`**, **`compose.yml`**, or **`deploy-app.yml`** changed (via paths-filter inside deploy workflow).
+- **ACR image tag (2025-06-04, Phase Lock [4]):** **`acrcadprod.azurecr.io/weather-api:<7-char-sha>`** (first 7 of commit SHA).
+- **Trivy gate (2025-06-04, Phase Lock [4]):** Scan built image; **fail CRITICAL only**.
+- **Azure OIDC config (2025-06-04, Phase Lock [4]):** GitHub Environment **`production`** for **`AZURE_CLIENT_ID`**, **`AZURE_TENANT_ID`**, **`AZURE_SUBSCRIPTION_ID`**; deploy + infra workflows only.
+- **ACA deploy mechanism (2025-06-04, Phase Lock [4]):** **`az containerapp update`** — not Terraform on routine app merges.
+- **Infrastructure CI (2025-06-04, Phase Lock [4]):** Path **`infra/**`**; PR plan to **job summary**; **`main` apply**; **`ARM_USE_AZUREAD=true`**.
+- **Post-deploy smoke (2025-06-04, Phase Lock [4]):** **`/health/live` only**; FQDN from **`az containerapp show`**.
+- **Deploy concurrency (2025-06-04, Phase Lock [4]):** **`deploy-prod`** cancel in progress; **`infra-prod`** queue (no cancel).
+- **Branch protection checks (2025-06-04, Phase Lock [4]):** Required **`App quality gates`** only; infra plan manual/README v1.
+- **Bandit in CI (2025-06-04, Phase Lock [4]):** **Required** (fixes deferred drift in resolved decisions).
+- **GitHub OIDC repo subject (2025-06-04, Phase Lock [4]):** Confirmed **`DNBLabs/containerized-api-deployment`**.
