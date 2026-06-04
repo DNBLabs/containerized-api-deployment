@@ -40,7 +40,7 @@ def test_ci_workflow_job_name_matches_branch_protection() -> None:
     """Phase Lock [4]: required check name App quality gates."""
     contents = _ci_workflow_text()
     assert re.search(
-        r'name:\s*App quality gates',
+        r"name:\s*App quality gates",
         contents,
     ), "ci.yml job must be named App quality gates for branch protection"
 
