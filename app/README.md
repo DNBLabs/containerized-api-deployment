@@ -73,3 +73,5 @@ uv run ruff format --check .
 uv run mypy .
 uv run bandit -r src/weather_api
 ```
+
+<!-- Task 23 path-filter test: app-only change -->
