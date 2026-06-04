@@ -1,5 +1,5 @@
 # Application quality gates (Phase Lock [4] / Task 20).
-# PR + push to main. Deploy/infra workflows: Tasks 21–23.
+# PR + push to main. Deploy: deploy-app.yml; infra: infra.yml (Task 23).
 
 name: CI
 
